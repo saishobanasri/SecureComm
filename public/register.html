@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureComm - Register</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Enhanced military grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                radial-gradient(circle at 25% 25%, rgba(74, 222, 128, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(34, 211, 238, 0.02) 0%, transparent 50%);
+            background-size: 40px 40px, 40px 40px, 200px 200px, 300px 300px;
+            pointer-events: none;
+            z-index: -1;
+            animation: gridPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Military radar sweep effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 1000px;
+            height: 1000px;
+            background: conic-gradient(from 0deg, transparent 340deg, rgba(74, 222, 128, 0.1) 350deg, rgba(74, 222, 128, 0.05) 360deg);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            pointer-events: none;
+            z-index: -1;
+            animation: radarSweep 12s linear infinite;
+        }
+
+        @keyframes radarSweep {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 40px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid rgba(74, 222, 128, 0.4);
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4ade80, #22d3ee, #4ade80, transparent);
+            animation: headerScan 3s ease-in-out infinite;
+        }
+
+        @keyframes headerScan {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ade80;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+            cursor: pointer;
+        }
+
+        .logo::before {
+            content: '';
+            width: 55px;
+            height: 55px;
+            background-image: url('logo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: inline-block;
+            animation: logoGlow 5s ease-in-out infinite;
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { 
+                filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.8));
+                transform: scale(1);
+            }
+            50% { 
+                filter: drop-shadow(0 0 25px rgba(74, 222, 128, 1));
+                transform: scale(1.1);
+            }
+        }
+
+        .back-btn {
+            padding: 12px 28px;
+            border: 2px solid #4ade80;
+            background: transparent;
+            color: #4ade80;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: rgba(74, 222, 128, 0.15);
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+            transform: translateY(-2px);
+            border-color: #22d3ee;
+            color: #22d3ee;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 120px;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            min-height: calc(100vh - 120px);
+        }
+
+        .register-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .register-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4ade80, #22d3ee, #fbbf24);
+            animation: containerScan 3s ease-in-out infinite;
+        }
+
+        @keyframes containerScan {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .register-title {
+            text-align: center;
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #4ade80, #22d3ee, #fbbf24, #4ade80);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            animation: titleGradient 4s ease-in-out infinite;
+        }
+
+        @keyframes titleGradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .register-subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .register-subtitle::before {
+            content: '> ';
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        /* Form Styles */
+        .register-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            color: #4ade80;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 14px;
+        }
+
+        .form-input, .form-select {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            font-family: 'Courier New', monospace;
+            transition: all 0.4s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            border-color: #4ade80;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .form-select {
+            cursor: pointer;
+        }
+
+        .form-select option {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 10px;
+        }
+
+        /* Service ID specific styling */
+        #serviceId {
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #serviceId::placeholder {
+            text-transform: none;
+        }
+
+        /* Photo Upload */
+        .photo-upload {
+            position: relative;
+            border: 2px dashed rgba(74, 222, 128, 0.5);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .photo-upload:hover {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .photo-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #4ade80;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #94a3b8;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .photo-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #4ade80;
+            margin: 0 auto 15px;
+            display: none;
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            grid-column: 1 / -1;
+            padding: 18px 40px;
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            border: none;
+            border-radius: 12px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 16px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(74, 222, 128, 0.3);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(74, 222, 128, 0.5);
+            background: linear-gradient(45deg, #22d3ee, #4ade80);
+        }
+
+        .submit-btn:active {
+            transform: translateY(-2px);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            background: rgba(0, 0, 0, 0.95);
+            margin: 5% auto;
+            padding: 40px;
+            border: 2px solid #4ade80;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4ade80, #22d3ee, #fbbf24);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-title {
+            font-size: 32px;
+            color: #4ade80;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .modal-subtitle {
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        .confirmation-details {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+        }
+
+        .detail-label {
+            color: #4ade80;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .detail-value {
+            color: #e2e8f0;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 15px 30px;
+            border: 2px solid;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .confirm-btn {
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            border-color: #4ade80;
+            color: #000;
+        }
+
+        .confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(74, 222, 128, 0.4);
+        }
+
+        .cancel-btn {
+            background: transparent;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .cancel-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Success Modal */
+        .success-modal .modal-title {
+            color: #4ade80;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            color: #4ade80;
+            margin-bottom: 20px;
+            animation: successPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .success-message {
+            color: #e2e8f0;
+            font-size: 18px;
+            line-height: 1.6;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .close-btn {
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            border: 2px solid #4ade80;
+            color: #000;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .register-form {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .register-container {
+                padding: 30px 20px;
+                margin: 0 10px;
+            }
+
+            .register-title {
+                font-size: 32px;
+            }
+
+            .modal-content {
+                margin: 10% auto;
+                padding: 30px 20px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            text-align: center;
+            color: #4ade80;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-top: 2px solid #4ade80;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal-content {
+    background: rgba(0, 0, 0, 0.95);
+    margin: 5% auto;
+    padding: 40px;
+    border: 2px solid #4ade80;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh; /* Add max height */
+    overflow-y: auto; /* Add scrolling */
+    position: relative;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+}
+
+.confirmation-details {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    max-height: 50vh; /* Add max height for details */
+    overflow-y: auto; /* Add scrolling for details */
+}
+
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo" onclick="window.location.href='index.html'">SecureComm</div>
+        <a href="index.html" class="back-btn">← Back to Home</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="register-container">
+            <h1 class="register-title">Personnel Registration</h1>
+            <p class="register-subtitle">Join the secure communication network!!</p>
+            
+            <form id="registerForm" class="register-form">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" id="fullName" required placeholder="Enter your full name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" class="form-input" id="dateOfBirth" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contact Number</label>
+                    <input type="tel" class="form-input" id="contactNumber" required placeholder="+91 1234567890">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-input" id="email" required placeholder="soldier@military.gov">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Service ID</label>
+                    <input type="text" class="form-input" id="serviceId" required placeholder="IC-12345" pattern="^IC-\d{5}$" maxlength="8">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Unit</label>
+                    <select class="form-select" id="unit" required>
+                        <option value="">Select Unit</option>
+                        <option value="UNIT001">Infantry Division</option>
+                        <option value="UNIT002">Armor Division</option>
+                        <option value="UNIT003">Artillery Unit</option>
+                        <option value="UNIT004">Engineering Corps</option>
+                        <option value="UNIT005">Medical Corps</option>
+                        <option value="UNIT006">Intelligence Unit</option>
+                        <option value="UNIT007">Communications Division</option>
+                        <option value="UNIT008">Logistics Support</option>
+                        <option value="UNIT009">Aviation Unit</option>
+                        <option value="UNIT010">Special Forces</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select class="form-select" id="role" required>
+                        <option value="">Select Role</option>
+                        <option value="ROLE001">Commander</option>
+			<option value="ROLE002">General</option>
+			<option value="ROLE003">Colonel</option>
+			<option value="ROLE004">Major</option>
+			<option value="ROLE005">Captain</option>
+			<option value="ROLE006">Lieutenant</option>
+			<option value="ROLE007">Sergeant</option>
+			<option value="ROLE008">Corporal</option>
+			<option value="ROLE009">Private</option>
+			<option value="ROLE010">Cadet</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="password" required placeholder="Enter secure password">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" id="confirmPassword" required placeholder="Confirm your password">
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="form-label">Profile Photo</label>
+                    <div class="photo-upload" onclick="document.getElementById('profilePhoto').click()">
+                        <input type="file" id="profilePhoto" accept="image/*">
+                        <img id="photoPreview" class="photo-preview" alt="Preview">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Click to upload profile photo</div>
+                        <div class="upload-hint">Supported formats: JPG, PNG, GIF (Max: 5MB)</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Register Personnel</button>
+                <div class="loading" id="loading">Processing registration...</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Confirm Registration</h2>
+                <p class="modal-subtitle">Please verify your information before submitting</p>
+            </div>
+            <div class="confirmation-details" id="confirmationDetails">
+                <!-- Details will be populated by JavaScript -->
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm-btn" onclick="confirmRegistration()">Confirm & Submit</button>
+                <button class="modal-btn cancel-btn" onclick="closeModal('confirmationModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal success-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="success-icon">✅</div>
+                <h2 class="modal-title">Registration Submitted</h2>
+            </div>
+            <div class="success-message">
+                Your registration request has been sent to higher officials for approval.<br><br>
+                <strong>You will receive an email notification once your ID is approved.</strong><br><br>
+                Thank you for your service!
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn close-btn" onclick="redirectToHome()">Return to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let formData = {};
+
+        // Service ID formatting and validation
+        document.getElementById('serviceId').addEventListener('input', function(e) {
+            let value = e.target.value.toUpperCase();
+            
+            // Remove any non-alphanumeric characters except dash
+            value = value.replace(/[^A-Z0-9-]/g, '');
+            
+            // Ensure it starts with IC-
+            if (!value.startsWith('IC-')) {
+                if (value.startsWith('IC')) {
+                    value = 'IC-' + value.substring(2);
+                } else {
+                    value = 'IC-' + value.replace(/^IC-?/, '');
+                }
+            }
+            
+            // Limit to IC- plus 5 digits
+            if (value.length > 8) {
+                value = value.substring(0, 8);
+            }
+            
+            // Ensure only numbers after IC-
+            const parts = value.split('-');
+            if (parts.length > 1) {
+                parts[1] = parts[1].replace(/[^0-9]/g, '');
+                value = parts[0] + '-' + parts[1];
+            }
+            
+            e.target.value = value;
+            
+            // Visual feedback for valid format
+            const isValid = /^IC-\d{5}$/.test(value);
+            if (value.length >= 3 && !isValid && value !== 'IC-') {
+                e.target.style.borderColor = '#ef4444';
+                e.target.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.3)';
+            } else if (isValid) {
+                e.target.style.borderColor = '#4ade80';
+                e.target.style.boxShadow = '0 0 20px rgba(74, 222, 128, 0.3)';
+            } else {
+                e.target.style.borderColor = 'rgba(74, 222, 128, 0.3)';
+                e.target.style.boxShadow = 'none';
+            }
+        });
+
+        // Photo upload preview
+        document.getElementById('profilePhoto').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('photoPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    
+                    // Hide upload text and show preview
+                    const uploadElements = document.querySelectorAll('.upload-icon, .upload-text, .upload-hint');
+                    uploadElements.forEach(el => el.style.display = 'none');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form submission
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate passwords match
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                alert('🚨 SECURITY ALERT\nPasswords do not match. Please verify and try again.');
+                return;
+            }
+
+            // Validate Service ID format
+            const serviceId = document.getElementById('serviceId').value;
+            if (!/^IC-\d{5}$/.test(serviceId)) {
+                alert('🚨 VALIDATION ERROR\nService ID must be in format IC-##### (IC followed by 5 digits)');
+                document.getElementById('serviceId').focus();
+                return;
+            }
+
+            // Collect form data
+            formData = {
+                fullName: document.getElementById('fullName').value,
+                dateOfBirth: document.getElementById('dateOfBirth').value,
+                contactNumber: document.getElementById('contactNumber').value,
+                email: document.getElementById('email').value,
+                serviceId: serviceId,
+                unit_id: document.getElementById('unit').value,
+                role_id: document.getElementById('role').value,
+                password: password,
+                profilePhoto: document.getElementById('profilePhoto').files[0]
+            };
+
+            // Show confirmation modal
+            showConfirmationModal();
+        });
+
+        function showConfirmationModal() {
+    const detailsContainer = document.getElementById('confirmationDetails');
+    const photoText = formData.profilePhoto ? formData.profilePhoto.name : 'No photo selected';
+    
+    // Get the actual unit and role names from the select options
+    const unitSelect = document.getElementById('unit');
+    const roleSelect = document.getElementById('role');
+    const unitName = unitSelect.options[unitSelect.selectedIndex].text;
+    const roleName = roleSelect.options[roleSelect.selectedIndex].text;
+    
+    detailsContainer.innerHTML = `
+        <div class="detail-row">
+            <span class="detail-label">Name:</span>
+            <span class="detail-value">${formData.fullName}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Date of Birth:</span>
+            <span class="detail-value">${formData.dateOfBirth}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Contact:</span>
+            <span class="detail-value">${formData.contactNumber}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Email:</span>
+            <span class="detail-value">${formData.email}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Service ID:</span>
+            <span class="detail-value">${formData.serviceId}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Unit:</span>
+            <span class="detail-value">${unitName}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Role:</span>
+            <span class="detail-value">${roleName}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Profile Photo:</span>
+            <span class="detail-value">${photoText}</span>
+        </div>
+    `;
+    
+    document.getElementById('confirmationModal').style.display = 'block';
+}
+
+        async function confirmRegistration() {
+            closeModal('confirmationModal');
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                // Create FormData for file upload
+                const submitData = new FormData();
+                Object.keys(formData).forEach(key => {
+                    if (key !== 'profilePhoto') {
+                        submitData.append(key, formData[key]);
+                    }
+                });
+                
+                if (formData.profilePhoto) {
+                    submitData.append('profilePhoto', formData.profilePhoto);
+                }
+
+                // Submit to backend
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    body: submitData
+                });
+
+                const result = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+
+                if (response.ok) {
+                    document.getElementById('successModal').style.display = 'block';
+                } else {
+                    alert('🚨 REGISTRATION FAILED\n' + (result.message || 'An error occurred during registration.'));
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert('🚨 NETWORK ERROR\nUnable to connect to secure servers. Please try again.');
+                console.error('Registration error:', error);
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function redirectToHome() {
+            window.location.href = 'index.html';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Enhanced form interactions
+        document.querySelectorAll('.form-input, .form-select').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.style.transform = 'translateY(-2px)';
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Real-time password matching
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                this.style.borderColor = '#ef4444';
+                this.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.3)';
+            } else if (confirmPassword && password === confirmPassword) {
+                this.style.borderColor = '#4ade80';
+                this.style.boxShadow = '0 0 20px rgba(74, 222, 128, 0.3)';
+            }
+        });
+
+        // Enhanced photo upload interactions
+        document.querySelector('.photo-upload').addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.borderColor = '#4ade80';
+            this.style.background = 'rgba(74, 222, 128, 0.15)';
+        });
+
+        document.querySelector('.photo-upload').addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.style.borderColor = 'rgba(74, 222, 128, 0.5)';
+            this.style.background = 'rgba(0, 0, 0, 0.3)';
+        });
+
+        document.querySelector('.photo-upload').addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.borderColor = 'rgba(74, 222, 128, 0.5)';
+            this.style.background = 'rgba(0, 0, 0, 0.3)';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('profilePhoto').files = files;
+                const event = new Event('change');
+                document.getElementById('profilePhoto').dispatchEvent(event);
+            }
+        });
+    </script>
+</body>
+</html>

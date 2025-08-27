@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureComm - Login</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/dist/face-api.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                radial-gradient(circle at 25% 25%, rgba(74, 222, 128, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(34, 211, 238, 0.02) 0%, transparent 50%);
+            background-size: 40px 40px, 40px 40px, 200px 200px, 300px 300px;
+            pointer-events: none;
+            z-index: -1;
+            animation: gridPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 1000px;
+            height: 1000px;
+            background: conic-gradient(from 0deg, transparent 340deg, rgba(74, 222, 128, 0.1) 350deg, rgba(74, 222, 128, 0.05) 360deg);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            pointer-events: none;
+            z-index: -1;
+            animation: radarSweep 12s linear infinite;
+        }
+
+        @keyframes radarSweep {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 40px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid rgba(74, 222, 128, 0.4);
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4ade80, #22d3ee, #4ade80, transparent);
+            animation: headerScan 3s ease-in-out infinite;
+        }
+
+        @keyframes headerScan {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ade80;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+            cursor: pointer;
+        }
+
+        .logo::before {
+            content: '';
+            width: 55px;
+            height: 55px;
+            background-image: url('logo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: inline-block;
+            animation: logoGlow 5s ease-in-out infinite;
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { 
+                filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.8));
+                transform: scale(1);
+            }
+            50% { 
+                filter: drop-shadow(0 0 25px rgba(74, 222, 128, 1));
+                transform: scale(1.1);
+            }
+        }
+
+        .back-btn {
+            padding: 12px 28px;
+            border: 2px solid #4ade80;
+            background: transparent;
+            color: #4ade80;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: rgba(74, 222, 128, 0.15);
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+            transform: translateY(-2px);
+            border-color: #22d3ee;
+            color: #22d3ee;
+        }
+
+        .main-content {
+            margin-top: 120px;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            min-height: calc(100vh - 120px);
+        }
+
+        .login-container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4ade80, #22d3ee, #fbbf24);
+            animation: containerScan 3s ease-in-out infinite;
+        }
+
+        @keyframes containerScan {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .login-title {
+            text-align: center;
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #4ade80, #22d3ee, #fbbf24, #4ade80);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            animation: titleGradient 4s ease-in-out infinite;
+        }
+
+        @keyframes titleGradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .login-subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .login-subtitle::before {
+            content: '> ';
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .camera-section {
+            margin-bottom: 30px;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 30px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #4ade80;
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-container.scanning {
+            animation: scanningPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes scanningPulse {
+            0%, 100% { 
+                box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+                border-color: #4ade80;
+            }
+            50% { 
+                box-shadow: 0 0 50px rgba(74, 222, 128, 0.8);
+                border-color: #22d3ee;
+            }
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        #capturedImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .camera-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #4ade80;
+        }
+
+        .camera-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .camera-text {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .camera-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .camera-btn, .file-btn {
+            padding: 12px 24px;
+            border: 2px solid #4ade80;
+            background: transparent;
+            color: #4ade80;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .camera-btn:hover, .file-btn:hover {
+            background: rgba(74, 222, 128, 0.15);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .camera-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .password-section {
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            color: #4ade80;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 14px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            font-family: 'Courier New', monospace;
+            transition: all 0.4s ease;
+        }
+
+        .form-input:focus {
+            border-color: #4ade80;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 18px 40px;
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            border: none;
+            border-radius: 12px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 16px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(74, 222, 128, 0.3);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(74, 222, 128, 0.5);
+            background: linear-gradient(45deg, #22d3ee, #4ade80);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: rgba(0, 0, 0, 0.95);
+            margin: 2% auto;
+            padding: 40px;
+            border: 2px solid #4ade80;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 800px;
+            position: relative;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4ade80, #22d3ee, #fbbf24);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-title {
+            font-size: 32px;
+            color: #4ade80;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .modal-subtitle {
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        .face-match-icon {
+            font-size: 64px;
+            color: #4ade80;
+            margin-bottom: 20px;
+            animation: successPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .confirmation-details {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .detail-label {
+            color: #4ade80;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 14px;
+            min-width: 120px;
+        }
+
+        .detail-value {
+            color: #e2e8f0;
+            text-align: right;
+            word-break: break-word;
+            flex: 1;
+        }
+
+        .decrypted-content {
+            background: rgba(16, 16, 16, 0.8);
+            border: 2px solid #fbbf24;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .decrypted-title {
+            color: #fbbf24;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .decrypted-message {
+            color: #e2e8f0;
+            font-size: 16px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .modal-btn {
+            padding: 15px 30px;
+            border: 2px solid;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+
+        .confirm-btn {
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            border-color: #4ade80;
+            color: #000;
+        }
+
+        .confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(74, 222, 128, 0.4);
+        }
+
+        .cancel-btn {
+            background: transparent;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .cancel-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+        }
+
+        .success-message {
+            color: #e2e8f0;
+            font-size: 18px;
+            line-height: 1.6;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .close-btn {
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            border: 2px solid #4ade80;
+            color: #000;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #4ade80;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-top: 2px solid #4ade80;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 30px 20px;
+                margin: 0 10px;
+            }
+            .login-title { font-size: 32px; }
+            .camera-container {
+                width: 150px;
+                height: 150px;
+            }
+            .modal-content {
+                margin: 5% auto;
+                padding: 30px 20px;
+                width: 95%;
+            }
+            .detail-row {
+                flex-direction: column;
+                gap: 5px;
+            }
+            .detail-label {
+                min-width: auto;
+            }
+            .detail-value {
+                text-align: left;
+            }
+            .modal-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .modal-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            .camera-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .camera-btn, .file-btn {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: rgba(74, 222, 128, 0.5);
+            border-radius: 10px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(74, 222, 128, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo" onclick="window.location.href='index.html'">SecureComm</div>
+        <a href="index.html" class="back-btn">← Back to Home</a>
+    </div>
+
+    <div class="main-content">
+        <div class="login-container">
+            <h1 class="login-title">Secure Access</h1>
+            <p class="login-subtitle">Biometric Authentication & Message Decryption</p>
+            <div class="camera-section">
+                <div class="camera-container" id="cameraContainer">
+                    <video id="video" autoplay muted></video>
+                    <img id="capturedImage" alt="Captured face">
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <div class="camera-icon">📹</div>
+                        <div class="camera-text">Face Recognition</div>
+                    </div>
+                </div>
+                <div class="camera-buttons">
+                    <button class="camera-btn" id="startCamera">Start Camera</button>
+                    <button class="camera-btn" id="captureBtn" disabled>Capture</button>
+                    <button class="camera-btn" id="retakeBtn" style="display: none;">Retake</button>
+                </div>
+
+            </div>
+            <div class="password-section" id="passwordSection">
+                <div class="form-group">
+                    <label class="form-label">Military Password / Decryption Key</label>
+                    <input type="password" class="form-input" id="password" placeholder="Enter your secure password">
+                </div>
+                <button class="login-btn" onclick="authenticateUser()">Authenticate & Decrypt</button>
+            </div>
+
+            <div class="loading" id="loading">Processing authentication...</div>
+        </div>
+    </div>
+
+    <div id="faceMatchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="face-match-icon">✅</div>
+                <h2 class="modal-title">Face Match Successful</h2>
+                <p class="modal-subtitle">Biometric verification completed</p>
+            </div>
+            <div class="success-message">
+                Face recognition successful!<br>
+                <strong>Military ID: <span id="matchedMilitaryId"></span></strong><br>
+                <strong>Unit ID: <span id="matchedUnitId"></span></strong><br>
+                <strong>Role ID: <span id="matchedRoleId"></span></strong><br>
+                <strong>Confidence: <span id="matchConfidence"></span>%</strong><br><br>
+                <strong>Please enter your military password to proceed and decrypt any hidden messages.</strong>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm-btn" onclick="proceedToPassword()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Personnel Details</h2>
+                <p class="modal-subtitle">Authentication & Decryption Results</p>
+            </div>
+            <div class="confirmation-details" id="userDetails">
+            </div>
+            <div id="decryptedContentContainer" style="display: none;">
+                <div class="decrypted-content">
+                    <div class="decrypted-title">🔓 Decrypted Message</div>
+                    <div class="decrypted-message" id="decryptedMessage"></div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm-btn" onclick="confirmLogin()">Confirm Access</button>
+                <button class="modal-btn cancel-btn" onclick="closeModal('detailsModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="face-match-icon">🎯</div>
+                <h2 class="modal-title">Login Successful</h2>
+            </div>
+            <div class="success-message" id="successMessage">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn close-btn" onclick="enterSystem()">Enter System</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        let capturedImageData = null;
+        let matchedProfile = null;
+        let profilesWithDescriptors = [];
+        let modelsLoaded = false;
+        let profileToUse = null;
+        let decryptedProfileData = null;
+
+        async function generateKey(password, salt) {
+            const encoder = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                encoder.encode(password),
+                'PBKDF2',
+                false,
+                ['deriveBits', 'deriveKey']
+            );
+            
+            return crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        // AES Decryption
+        async function decryptMessage(encryptedData, password) {
+            const salt = encryptedData.slice(0, 16);
+            const iv = encryptedData.slice(16, 28);
+            const encrypted = encryptedData.slice(28);
+            
+            const key = await generateKey(password, salt);
+            
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                encrypted
+            );
+            
+            const decoder = new TextDecoder();
+            return decoder.decode(decrypted);
+        }
+
+        // LSB Steganography - Extract data from image
+        function extractDataFromImage(imageData) {
+            const pixels = imageData.data;
+            let lengthBinary = '';
+            for (let i = 0; i < 32; i++) {
+                lengthBinary += (pixels[i] & 1).toString();
+            }
+            const dataLength = parseInt(lengthBinary, 2);            
+            if (dataLength <= 0 || dataLength > 1000000) {
+                throw new Error('Invalid data length or no hidden data found');
+            }
+            let dataBinary = '';
+            for (let i = 32; i < 32 + (dataLength * 8); i++) {
+                dataBinary += (pixels[i] & 1).toString();
+            }
+            const dataBytes = [];
+            for (let i = 0; i < dataBinary.length; i += 8) {
+                dataBytes.push(parseInt(dataBinary.substr(i, 8), 2));
+            }
+            return new Uint8Array(dataBytes);
+        }
+
+        // Main decryption process function
+        async function processImageDecryption(imageFile, password) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = async function() {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const extractedData = extractDataFromImage(imageData);
+                        const decryptedMessage = await decryptMessage(extractedData, password);
+                        resolve(decryptedMessage);
+                        
+                    } catch (error) {
+                        reject(new Error(`Decryption failed: ${error.message}`));
+                    }
+                };
+                
+                img.onerror = function() {
+                    reject(new Error('Error loading image'));
+                };
+                if (typeof imageFile === 'string') {
+                    img.src = imageFile; // URL string
+                } else {
+                    img.src = URL.createObjectURL(imageFile); // File object
+                }
+            });
+        }
+
+        // ==================== FACE RECOGNITION LOGIC ====================
+        async function loadFaceModels() {
+            try {
+                console.log('🤖 Loading face recognition models...');
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('loading').textContent = 'Loading AI models...';
+                const MODEL_URL = '/models';
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+                    faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model'),
+                    faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model')
+                ]);
+
+                console.log('✅ Face recognition models loaded successfully');
+                modelsLoaded = true;
+                document.getElementById('loading').style.display = 'none';
+                await loadProfileDescriptors();
+            } catch (error) {
+                console.error('❌ Error loading face models:', error);
+                document.getElementById('loading').textContent = 'Face recognition unavailable. Using password-only login.';
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('passwordSection').style.display = 'block';
+                }, 3000);
+            }
+        }
+
+        async function loadProfileDescriptors() {
+            try {
+                console.log('📸 Loading profile photos from database...');
+                const response = await fetch('/api/profiles/photos');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const profiles = await response.json();
+                console.log(`📸 Processing ${profiles.length} profile photos from database...`);
+                
+                profilesWithDescriptors = [];
+
+                for (const profile of profiles) {
+                    try {
+                        console.log(`📸 Processing ${profile.name}...`);
+                        console.log(`🔍 Profile photo data for ${profile.name}:`, profile.profilePhoto.substring(0, 100) + '...');
+                        
+                        // Create image element for face recognition
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        
+                        await new Promise((resolve, reject) => {
+                            img.onload = () => {
+                                console.log(`✅ Image loaded for ${profile.name}`);
+                                resolve();
+                            };
+                            img.onerror = (err) => {
+                                console.error(`❌ Failed to load image for ${profile.name}:`, err);
+                                reject(err);
+                            };
+                            img.src = profile.profilePhoto; // This is the encrypted profile photo from database
+                        });
+
+                        // Generate face descriptor for recognition
+                        const detection = await faceapi
+                            .detectSingleFace(img)
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+
+                        if (detection) {
+                            profilesWithDescriptors.push({
+                                militaryId: profile.militaryId,
+                                unitId: profile.unitId,
+                                roleId: profile.roleId,
+                                profilePhoto: profile.profilePhoto,
+                                descriptor: Array.from(detection.descriptor)
+                            });
+                            console.log(`✅ Generated descriptor for ${profile.militaryId}`);
+                        } else {
+                            console.log(`⚠️  No face detected in ${profile.name}'s photo`);
+                        }
+
+                    } catch (error) {
+                        console.log(`⚠️  Error processing ${profile.name}:`, error.message);
+                    }
+                }
+
+                console.log(`🎯 Successfully processed ${profilesWithDescriptors.length} profiles from database`);
+
+            } catch (error) {
+                console.error('❌ Error loading profile photos from database:', error);
+                // If we can't load profiles from database, show password login
+                document.getElementById('passwordSection').style.display = 'block';
+            }
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFaceModels();
+        });
+
+        document.getElementById('startCamera').addEventListener('click', async function() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 200, 
+                        height: 200,
+                        facingMode: 'user'
+                    } 
+                });
+                
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+                document.getElementById('captureBtn').disabled = false;
+                document.getElementById('startCamera').textContent = 'Camera Active';
+                document.getElementById('startCamera').disabled = true;
+                document.getElementById('cameraContainer').classList.add('scanning');
+                
+            } catch (err) {
+                alert('🚨 CAMERA ERROR\nUnable to access camera. Please check permissions.');
+                console.error('Camera error:', err);
+            }
+        });
+
+        document.getElementById('captureBtn').addEventListener('click', function() {
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            
+            capturedImageData = canvas.toDataURL('image/png');
+            
+            const capturedImage = document.getElementById('capturedImage');
+            capturedImage.src = capturedImageData;
+            capturedImage.style.display = 'block';
+            
+            video.style.display = 'none';
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            document.getElementById('cameraContainer').classList.remove('scanning');
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'inline-block';
+            
+            // Perform face matching
+            performFaceMatching();
+        });
+
+        document.getElementById('retakeBtn').addEventListener('click', function() {
+            document.getElementById('capturedImage').style.display = 'none';
+            document.getElementById('cameraPlaceholder').style.display = 'flex';
+            document.getElementById('startCamera').disabled = false;
+            document.getElementById('startCamera').textContent = 'Start Camera';
+            document.getElementById('captureBtn').disabled = true;
+            document.getElementById('captureBtn').style.display = 'inline-block';
+            document.getElementById('retakeBtn').style.display = 'none';
+            capturedImageData = null;
+            matchedProfile = null;
+        });
+
+        // ==================== FACE MATCHING ====================
+
+        async function performFaceMatching() {
+            if (!capturedImageData) {
+                alert('🚨 ERROR\nNo image captured for face matching.');
+                return;
+            }
+
+            if (!modelsLoaded) {
+                alert('🚨 ERROR\nFace recognition models not loaded. Please try password login.');
+                document.getElementById('passwordSection').style.display = 'block';
+                return;
+            }
+
+            if (profilesWithDescriptors.length === 0) {
+                alert('🚨 ERROR\nNo profile descriptors available. Please try password login.');
+                document.getElementById('passwordSection').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').textContent = 'Analyzing face...';
+            
+            try {
+                // Create image element from captured data
+                const img = new Image();
+                img.src = capturedImageData;
+                
+                await new Promise((resolve) => {
+                    img.onload = resolve;
+                });
+
+                // Generate face descriptor for captured image
+                const detection = await faceapi
+                    .detectSingleFace(img)
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+                if (!detection) {
+                    document.getElementById('loading').style.display = 'none';
+                    alert('🚨 FACE RECOGNITION FAILED\nNo face detected in captured image. Please ensure your face is clearly visible and try again.');
+                    return;
+                }
+
+                console.log('✅ Face detected in captured image');
+                
+                // Compare with database profiles
+                const capturedDescriptor = Array.from(detection.descriptor);
+                
+                const response = await fetch('/api/face-match', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        capturedDescriptor: capturedDescriptor,
+                        profileDescriptors: profilesWithDescriptors.map(p => ({
+                            militaryId: p.militaryId,
+                            name: p.name,
+                            descriptor: p.descriptor
+                        }))
+                    })
+                });
+
+                const matchResult = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+
+                if (matchResult.match) {
+                    // Find the full profile data from our loaded profiles
+                    const fullProfile = profilesWithDescriptors.find(p => p.militaryId === matchResult.profile.militaryId);
+                    
+                    matchedProfile = {
+                        militaryId: fullProfile.militaryId,
+                        unitId: fullProfile.unitId,
+                        roleId: fullProfile.roleId,
+                        profilePhoto: fullProfile.profilePhoto,
+                        confidence: matchResult.profile.confidence
+                    };
+
+                    profileToUse = matchedProfile; // Store for later decryption
+                    console.log('🎯 Matched profile photo data:', matchedProfile.profilePhoto.substring(0, 100) + '...');
+                    
+                    document.getElementById('matchedMilitaryId').textContent = matchedProfile.militaryId;
+                    document.getElementById('matchedUnitId').textContent = matchedProfile.unitId;
+                    document.getElementById('matchedRoleId').textContent = matchedProfile.roleId;
+                    document.getElementById('matchConfidence').textContent = matchedProfile.confidence.toFixed(1);
+                    document.getElementById('faceMatchModal').style.display = 'block';
+                } else {
+                    alert('🚨 FACE RECOGNITION FAILED\nNo matching profile found in database. Please try again or use password login.');
+                    document.getElementById('passwordSection').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                console.error('Face matching error:', error);
+                alert('🚨 SYSTEM ERROR\nFace matching service unavailable. Please try password login.');
+                document.getElementById('passwordSection').style.display = 'block';
+            }
+        }
+
+        function proceedToPassword() {
+            closeModal('faceMatchModal');
+            document.getElementById('passwordSection').style.display = 'block';
+            document.getElementById('password').focus();
+        }
+
+        // ==================== AUTHENTICATION & DECRYPTION ====================
+
+        async function authenticateUser() {
+    const password = document.getElementById('password').value;
+    
+    if (!password) {
+        alert('🚨 AUTHENTICATION ERROR\nPassword is required for access.');
+        return;
+    }
+
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading').textContent = 'Authenticating & Decrypting Profile...';
+    
+    try {
+        let authProfile = null;
+        let militaryIdToUse = null;
+        
+        if (profileToUse) {
+            // Face match exists - use the matched militaryId
+            militaryIdToUse = profileToUse.militaryId;
+        } else {
+            // No face match - we need Military ID input
+            militaryIdToUse = document.getElementById('militaryIdInput').value;
+            
+            if (!militaryIdToUse) {
+                document.getElementById('loading').style.display = 'none';
+                alert('🚨 AUTHENTICATION ERROR\nMilitary ID is required for password-only login.');
+                return;
+            }
+        }
+        
+        // Always authenticate with militaryId + password
+        const authResponse = await fetch('/api/authenticate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                militaryId: militaryIdToUse,
+                password: password
+            })
+        });
+
+        const authResult = await authResponse.json();
+        
+        if (!authResult.success) {
+    document.getElementById('loading').style.display = 'none';
+    alert('🚨 AUTHENTICATION FAILED\nInvalid credentials. Access denied.');
+    return;
+}
+
+authProfile = authResult.profile;
+
+// STORE SESSION DATA HERE
+if (authResult.session) {
+    window.currentSession = authResult.session;
+    console.log('📊 Session created:', authResult.session.session_id);
+} else {
+    window.currentSession = null;
+    console.log('⚠️ No session data received');
+}
+        
+        // For decryption, we need the profile photo
+        if (!profileToUse) {
+            profileToUse = {
+                militaryId: authProfile.militaryId,
+                profilePhoto: authProfile.profilePhoto
+            };
+        }
+        
+        // Decrypt using password only
+        let decryptedProfileData = null;
+        
+        if (profileToUse && profileToUse.profilePhoto) {
+            try {
+                console.log('🔓 Attempting to decrypt profile photo using password only...');
+                decryptedProfileData = await processImageDecryption(profileToUse.profilePhoto, password);
+                console.log('✅ Profile photo decryption successful:', decryptedProfileData);
+            } catch (decryptError) {
+                console.log('⚠️ Profile photo decryption failed:', decryptError.message);
+            }
+        }
+        
+        document.getElementById('loading').style.display = 'none';
+        displayUserDetails(authProfile, decryptedProfileData);
+
+    } catch (error) {
+        document.getElementById('loading').style.display = 'none';
+        console.error('Authentication error:', error);
+        alert('🚨 SYSTEM ERROR\nAuthentication service unavailable. Please try again later.');
+    }
+}
+
+        function displayUserDetails(profile, decryptedProfileData) {
+            // Only show decrypted message if available
+            if (decryptedProfileData) {
+                document.getElementById('decryptedMessage').textContent = decryptedProfileData;
+                document.getElementById('decryptedContentContainer').style.display = 'block';
+    
+                // Hide user details section since we only want decrypted message
+                document.getElementById('userDetails').style.display = 'none';
+            } else {
+                document.getElementById('decryptedContentContainer').style.display = 'none';
+                document.getElementById('userDetails').innerHTML = '<p style="color: #ef4444; text-align: center;">No decrypted message found.</p>';
+            }
+  
+            // Store data for success message
+            window.currentProfile = profile;
+            window.currentDecryptedData = decryptedProfileData;
+            document.getElementById('detailsModal').style.display = 'block';
+        }
+
+        function confirmLogin() {
+    closeModal('detailsModal');
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading').textContent = 'Finalizing access...';
+    
+    setTimeout(() => {
+        document.getElementById('loading').style.display = 'none';
+        const profile = window.currentProfile;
+        const decryptedData = window.currentDecryptedData;
+        const sessionData = window.currentSession; // Store session data from auth response
+        
+        let successMsg = `
+            <strong>Welcome!</strong><br><br>
+            Access granted to SecureComm military communication system.<br><br>
+            <strong>Military ID: ${profile.militaryId}</strong><br>
+            <strong>Unit ID: ${profile.unitId}</strong><br>
+            <strong>Role ID: ${profile.roleId}</strong><br><br>
+            <strong>Status: AUTHENTICATED</strong>`;
+        
+        if (sessionData) {
+            successMsg += `<br><br><strong>📊 Session Details:</strong><br>
+            <strong>Session ID: ${sessionData.session_id}</strong><br>
+            <strong>Login Time: ${new Date(sessionData.login_time).toLocaleString()}</strong>`;
+        }
+        
+        if (decryptedData) {
+            successMsg += `<br><br><strong>🔓 Profile Photo Decrypted Successfully:</strong><br>
+            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid #fbbf24; border-radius: 10px; padding: 15px; margin-top: 10px; color: #fbbf24; text-align: left;">
+                <strong>CLASSIFIED INTELLIGENCE:</strong><br>${decryptedData}
+            </div>`;
+        }
+        
+        document.getElementById('successMessage').innerHTML = successMsg;
+        document.getElementById('successModal').style.display = 'block';
+    }, 1500);
+}
+
+        function enterSystem() {
+            alert('🎯 SYSTEM ACCESS GRANTED\nRedirecting to SecureComm Dashboard...');
+            window.location.href = 'dashboard.html';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        document.getElementById('password').addEventListener('focus', function() {
+            this.parentElement.style.transform = 'translateY(-2px)';
+        });
+
+        document.getElementById('password').addEventListener('blur', function() {
+            this.parentElement.style.transform = 'translateY(0)';
+        });
+
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                authenticateUser();
+            }
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Store session data (in memory only for Claude.ai compatibility)
+function storeSessionData(sessionData, profileData) {
+    window.activeSession = {
+        session_id: sessionData?.session_id || null,
+        military_id: profileData.militaryId,
+        login_time: sessionData?.login_time || new Date().toISOString(),
+        profile: profileData
+    };
+    console.log('Session stored:', window.activeSession);
+}
+
+// Call this in enterSystem function
+function enterSystem() {
+    if (window.currentSession && window.currentProfile) {
+        storeSessionData(window.currentSession, window.currentProfile);
+    }
+    
+    alert('🎯 SYSTEM ACCESS GRANTED\nRedirecting to SecureComm Dashboard...');
+    window.location.href = 'main.html';
+}
+</script>
+</body>
+</html>
