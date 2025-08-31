@@ -1,35 +1,4 @@
-# Dependencies - NEVER push these
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment variables - CONTAINS SENSITIVE INFO
 .env
-
-# Upload directories (may contain user files)
-uploads/
-Registeruploads/
-files/
-
-# Build outputs
-dist/
-build/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
 *.log
-logs/
-
-# Temporary files
-*.tmp
-*.temp
+.DS_Store

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureComm - StegoSecure</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Enhanced military grid background */
+        body::before {
+            content: '';
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 222, 128, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none; z-index: -1; animation: gridPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Header */
+        .header {
+            position: fixed; top: 0; width: 100%; height: 80px;
+            background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px);
+            z-index: 1000; display: flex; justify-content: space-between;
+            align-items: center; padding: 0 30px;
+            border-bottom: 3px solid rgba(74, 222, 128, 0.4);
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, #4ade80, #22d3ee, #4ade80, transparent);
+            animation: headerScan 3s ease-in-out infinite;
+        }
+
+        @keyframes headerScan {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .logo {
+            font-size: 24px; font-weight: bold; color: #4ade80;
+            display: flex; align-items: center; gap: 15px;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+
+        .logo::before {
+            content: ''; width: 45px; height: 45px;
+            background-image: url('logo.png'); background-size: contain;
+            background-repeat: no-repeat; background-position: center; display: inline-block;
+            animation: logoGlow 5s ease-in-out infinite;
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.8)); }
+            50% { filter: drop-shadow(0 0 25px rgba(74, 222, 128, 1)); }
+        }
+        
+        .auth-btn {
+            padding: 12px 28px; border: 2px solid #4ade80; background: transparent;
+            color: #4ade80; border-radius: 8px; cursor: pointer; font-weight: bold;
+            font-family: 'Courier New', monospace; text-transform: uppercase; letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-btn:hover {
+            background: rgba(74, 222, 128, 0.15); box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+            transform: translateY(-2px); border-color: #22d3ee; color: #22d3ee;
+        }
+
+        /* Main Layout */
+        .main-container { display: flex; height: calc(100vh - 80px); margin-top: 80px; }
+        .left-sidebar { display: none; /* Sidebar hidden for full focus on the tool */ }
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+
+        /* Custom Scrollbar for Main Content */
+        .main-content::-webkit-scrollbar { width: 8px; }
+        .main-content::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+        .main-content::-webkit-scrollbar-thumb { background: rgba(74, 222, 128, 0.6); border-radius: 4px; }
+        .main-content::-webkit-scrollbar-thumb:hover { background: rgba(74, 222, 128, 0.8); }
+
+        /* Re-themed Stego Tool Container */
+        .stego-container {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 30px; border-radius: 15px;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            max-width: 900px; margin: 0 auto;
+        }
+
+        h1.tool-title {
+            text-align: center; color: #4ade80; margin-bottom: 10px;
+            font-size: 2.5em; text-transform: uppercase; letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+        }
+
+        .tool-subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; font-size: 1.1em; }
+        
+        /* Re-themed Tabs */
+        .nav-tabs {
+            display: flex; margin-bottom: 30px;
+            border-bottom: 2px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .nav-tab {
+            flex: 1; padding: 15px 20px; background: none; border: none; cursor: pointer;
+            font-size: 16px; font-weight: 600; color: #94a3b8; transition: all 0.3s;
+            position: relative; font-family: 'Courier New', monospace; text-transform: uppercase;
+        }
+
+        .nav-tab.active { color: #4ade80; }
+        .nav-tab.active::after {
+            content: ''; position: absolute; bottom: -2px; left: 0; right: 0;
+            height: 2px; background: #4ade80;
+        }
+        .nav-tab:hover { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .section {
+            margin-bottom: 30px; padding: 25px;
+            background: rgba(0, 0, 0, 0.4); border-radius: 12px;
+            border-left: 4px solid #4ade80;
+        }
+
+        .section h2 { color: #4ade80; margin-bottom: 15px; font-size: 1.4em; }
+
+        /* Re-themed Form Elements */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #e2e8f0; }
+
+        input[type="text"], input[type="password"], textarea, input[type="file"] {
+            width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(74, 222, 128, 0.4); border-radius: 8px;
+            font-size: 16px; transition: all 0.3s; color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+            outline: none; border-color: #4ade80;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.3);
+        }
+        
+        textarea { resize: vertical; min-height: 100px; }
+
+        /* Re-themed Buttons with Minimal Shadows */
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+
+        button.tool-btn {
+            padding: 12px 20px; border: none; border-radius: 8px; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: all 0.3s;
+            font-family: 'Courier New', monospace; text-transform: uppercase; letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            color: #000;
+            flex: 1;
+            /* No initial box-shadow */
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 222, 128, 0.4); /* Minimal shadow */
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #22d3ee, #4ade80);
+            color: #000;
+            flex: 1;
+            /* No initial box-shadow */
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(34, 211, 238, 0.4); /* Minimal shadow with accent color */
+        }
+
+        .btn-clear {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+            /* No initial box-shadow */
+        }
+
+        .btn-clear:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4); /* Minimal red shadow */
+        }
+
+        .btn-download { background: #28a745; color: white; }
+        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4); }
+
+        /* Re-themed Result/Info Boxes */
+        .result {
+            margin-top: 15px; padding: 15px; border-radius: 8px;
+            word-break: break-all; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5;
+        }
+
+        .error { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid #ef4444; }
+        .success { background: rgba(74, 222, 128, 0.1); color: #86efac; border: 1px solid #4ade80; }
+        .info {
+            background: rgba(59, 130, 246, 0.1); color: #93c5fd; border: 1px solid #3b82f6;
+            padding: 15px; border-radius: 8px; margin-bottom: 20px;
+        }
+        
+        /* Re-themed Previews */
+        .preview-container { display: flex; gap: 20px; margin-top: 20px; }
+
+        .preview-box {
+            flex: 1; text-align: center; padding: 20px;
+            border: 2px dashed rgba(74, 222, 128, 0.4);
+            border-radius: 8px; background: rgba(0,0,0,0.3);
+        }
+        .preview-box img { max-width: 100%; max-height: 200px; border-radius: 8px; }
+        .preview-box h3 { margin: 10px 0; color: #e2e8f0; }
+        
+        .copy-btn {
+            background: #4ade80; color: #000; padding: 5px 10px; border: none;
+            border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;
+        }
+
+        /* Re-themed Progress Bar */
+        .progress-bar { width: 100%; height: 10px; background: rgba(0,0,0,0.5); border-radius: 10px; overflow: hidden; margin: 20px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #4ade80, #22d3ee); width: 0%; transition: width 0.3s; }
+
+        .step-indicator { display: flex; justify-content: space-between; margin: 20px 0; }
+        .step { flex: 1; text-align: center; padding: 8px; background: rgba(0,0,0,0.4); border-radius: 20px; margin: 0 5px; font-size: 12px; color: #94a3b8; border: 1px solid transparent; }
+        .step.active { background: rgba(74, 222, 128, 0.2); color: #4ade80; border-color: #4ade80; }
+        .step.completed { background: #28a745; color: white; }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">SecureComm</div>
+        <a href="main.html"><button class="auth-btn">Back to Dashboard</button></a>
+    </div>
+
+    <div class="main-container">
+        <div class="left-sidebar"></div>
+
+        <div class="main-content">
+            <div class="stego-container">
+                <h1 class="tool-title">StegoSecure</h1>
+                <p class="tool-subtitle">Advanced Steganography + AES Encryption Tool</p>
+
+                <div class="nav-tabs">
+                    <button class="nav-tab active" onclick="showTab('encode')">🔒 Encode & Hide</button>
+                    <button class="nav-tab" onclick="showTab('decode')">🔓 Extract & Decrypt</button>
+                    <button class="nav-tab" onclick="showTab('about')">ℹ️ About</button>
+                </div>
+
+                <div id="encode" class="tab-content active">
+                    <div class="section">
+                        <h2>Encode Message in Image</h2>
+                        <div class="step-indicator">
+                            <div class="step active" id="step1">1. Message</div>
+                            <div class="step" id="step2">2. Password</div>
+                            <div class="step" id="step3">3. Image</div>
+                            <div class="step" id="step4">4. Process</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Secret Message:</label>
+                            <textarea id="message" placeholder="Enter your secret message here..." rows="4"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Encryption Password:</label>
+                            <input type="password" id="password" placeholder="Enter a strong password for encryption...">
+                        </div>
+                        <div class="form-group">
+                            <label for="coverImage">Cover Image (PNG Recommended):</label>
+                            <input type="file" id="coverImage" accept="image/*">
+                        </div>
+                        <div class="progress-bar" id="encodeProgress" style="display: none;"><div class="progress-fill" id="encodeProgressFill"></div></div>
+                        <div class="btn-group">
+                            <button class="tool-btn btn-primary" onclick="processEncode()">Encrypt & Hide</button>
+                            <button class="tool-btn btn-clear" onclick="clearEncode()">Clear All</button>
+                        </div>
+                        <div class="preview-container" id="encodePreview" style="display: none;">
+                            <div class="preview-box">
+                                <h3>Original</h3>
+                                <img id="originalPreview" alt="Original">
+                            </div>
+                            <div class="preview-box">
+                                <h3>Stego Image</h3>
+                                <img id="stegoPreview" alt="Stego"><br>
+                                <button class="tool-btn btn-download" id="downloadBtn" onclick="downloadStegoImage()">Download</button>
+                            </div>
+                        </div>
+                        <div id="encodeResult"></div>
+                    </div>
+                </div>
+
+                <div id="decode" class="tab-content">
+                    <div class="section">
+                        <h2>Extract & Decrypt from Image</h2>
+                        <div class="form-group">
+                            <label for="stegoImage">Stego Image:</label>
+                            <input type="file" id="stegoImage" accept="image/*">
+                        </div>
+                        <div class="form-group">
+                            <label for="decryptPassword">Decryption Password:</label>
+                            <input type="password" id="decryptPassword" placeholder="Enter the password used for encryption...">
+                        </div>
+                        <div class="progress-bar" id="decodeProgress" style="display: none;"><div class="progress-fill" id="decodeProgressFill"></div></div>
+                        <div class="btn-group">
+                            <button class="tool-btn btn-secondary" onclick="processDecode()">Extract & Decrypt</button>
+                            <button class="tool-btn btn-clear" onclick="clearDecode()">Clear All</button>
+                        </div>
+                        <div id="decodeResult"></div>
+                    </div>
+                </div>
+
+                <div id="about" class="tab-content">
+                    <div class="section">
+                        <h2>About StegoSecure</h2>
+                        <p style="margin-bottom: 20px;">StegoSecure combines AES encryption with LSB steganography for double-layer security.</p>
+                        <h3 style="color: #4ade80; margin: 20px 0 10px 0;">AES Encryption</h3>
+                        <p>Advanced Encryption Standard (AES-256) with PBKDF2 key derivation. Your message is encrypted before hiding.</p>
+                        <h3 style="color: #4ade80; margin: 20px 0 10px 0;">LSB Steganography</h3>
+                        <p>Least Significant Bit technique hides data in image pixels, imperceptible to human eyes.</p>
+                        <div class="info"><strong>Contact:</strong> For support, email us at support@stegosecure.com</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stegoImageData = null;
+
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // Generate a key from password using PBKDF2
+        async function generateKey(password, salt) {
+            const encoder = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+            return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+        }
+
+        // AES Encryption
+        async function encryptMessage(message, password) {
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const key = await generateKey(password, salt);
+            const encoder = new TextEncoder();
+            const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, encoder.encode(message));
+            const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+            combined.set(salt, 0);
+            combined.set(iv, salt.length);
+            combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+            return combined;
+        }
+
+        // AES Decryption
+        async function decryptMessage(encryptedData, password) {
+            const salt = encryptedData.slice(0, 16);
+            const iv = encryptedData.slice(16, 28);
+            const encrypted = encryptedData.slice(28);
+            const key = await generateKey(password, salt);
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, encrypted);
+            const decoder = new TextDecoder();
+            return decoder.decode(decrypted);
+        }
+
+        // LSB Steganography - Hide data in image
+        function hideDataInImage(imageData, data) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = imageData.width;
+            canvas.height = imageData.height;
+            const newImageData = ctx.createImageData(imageData.width, imageData.height);
+            const pixels = new Uint8ClampedArray(imageData.data);
+            const dataArray = Array.from(data);
+            const lengthBinary = dataArray.length.toString(2).padStart(32, '0');
+            const dataBinary = dataArray.map(byte => byte.toString(2).padStart(8, '0')).join('');
+            const endMarker = '1111111111111110';
+            const fullBinary = lengthBinary + dataBinary + endMarker;
+            if (fullBinary.length > pixels.length) throw new Error('Image too small for this message');
+            for (let i = 0; i < fullBinary.length; i++) {
+                pixels[i] = (pixels[i] & 0xFE) | parseInt(fullBinary[i]);
+            }
+            newImageData.data.set(pixels);
+            ctx.putImageData(newImageData, 0, 0);
+            return canvas;
+        }
+
+        // LSB Steganography - Extract data from image
+        function extractDataFromImage(imageData) {
+            const pixels = imageData.data;
+            let lengthBinary = '';
+            for (let i = 0; i < 32; i++) lengthBinary += (pixels[i] & 1).toString();
+            const dataLength = parseInt(lengthBinary, 2);
+            if (isNaN(dataLength) || dataLength <= 0 || (32 + dataLength * 8) > pixels.length) throw new Error('Invalid data length or no hidden data found');
+            let dataBinary = '';
+            for (let i = 32; i < 32 + (dataLength * 8); i++) dataBinary += (pixels[i] & 1).toString();
+            const dataBytes = [];
+            for (let i = 0; i < dataBinary.length; i += 8) dataBytes.push(parseInt(dataBinary.substr(i, 8), 2));
+            return new Uint8Array(dataBytes);
+        }
+
+        // Process encoding
+        async function processEncode() {
+            const message = document.getElementById('message').value, password = document.getElementById('password').value, coverImageFile = document.getElementById('coverImage').files[0];
+            const resultDiv = document.getElementById('encodeResult'), progressBar = document.getElementById('encodeProgress'), progressFill = document.getElementById('encodeProgressFill');
+            if (!message || !password || !coverImageFile) { resultDiv.innerHTML = '<div class="result error">Please fill all fields and upload an image!</div>'; return; }
+            try {
+                progressBar.style.display = 'block'; updateProgress(progressFill, 25); updateSteps(2);
+                const encryptedData = await encryptMessage(message, password);
+                updateProgress(progressFill, 50); updateSteps(3);
+                const img = new Image();
+                img.onload = async () => {
+                    try {
+                        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+                        canvas.width = img.width; canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        updateProgress(progressFill, 75); updateSteps(4);
+                        const stegoCanvas = hideDataInImage(imageData, encryptedData);
+                        updateProgress(progressFill, 100);
+                        document.getElementById('originalPreview').src = URL.createObjectURL(coverImageFile);
+                        document.getElementById('stegoPreview').src = stegoCanvas.toDataURL();
+                        document.getElementById('encodePreview').style.display = 'flex';
+                        stegoCanvas.toBlob(blob => { stegoImageData = blob; });
+                        resultDiv.innerHTML = '<div class="result success">✅ Message successfully encrypted and hidden!</div>';
+                        updateSteps(5);
+                    } catch (e) { resultDiv.innerHTML = `<div class="result error">❌ Error processing image: ${e.message}</div>`; progressBar.style.display = 'none'; }
+                };
+                img.onerror = () => { resultDiv.innerHTML = '<div class="result error">❌ Could not load image.</div>'; progressBar.style.display = 'none'; };
+                img.src = URL.createObjectURL(coverImageFile);
+            } catch (e) { resultDiv.innerHTML = `<div class="result error">❌ Encryption failed: ${e.message}</div>`; progressBar.style.display = 'none'; }
+        }
+
+        // Process decoding
+        async function processDecode() {
+            const stegoImageFile = document.getElementById('stegoImage').files[0], password = document.getElementById('decryptPassword').value;
+            const resultDiv = document.getElementById('decodeResult'), progressBar = document.getElementById('decodeProgress'), progressFill = document.getElementById('decodeProgressFill');
+            if (!stegoImageFile || !password) { resultDiv.innerHTML = '<div class="result error">Please upload an image and enter the password!</div>'; return; }
+            try {
+                progressBar.style.display = 'block'; updateProgress(progressFill, 25);
+                const img = new Image();
+                img.onload = async () => {
+                    try {
+                        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+                        canvas.width = img.width; canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        updateProgress(progressFill, 50);
+                        const extractedData = extractDataFromImage(imageData);
+                        updateProgress(progressFill, 75);
+                        const decryptedMessage = await decryptMessage(extractedData, password);
+                        updateProgress(progressFill, 100);
+                        resultDiv.innerHTML = `<div class="result success"><strong>✅ Message Extracted & Decrypted!</strong><br><br><div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-top: 10px; color: #fff;">${decryptedMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div><button class="copy-btn" onclick="copyToClipboard('${decryptedMessage.replace(/'/g, "\\'")}')">📋 Copy</button></div>`;
+                    } catch (e) { resultDiv.innerHTML = `<div class="result error">❌ Decryption failed: Wrong password or corrupted image.</div>`; progressBar.style.display = 'none'; }
+                };
+                img.onerror = () => { resultDiv.innerHTML = '<div class="result error">❌ Could not load image.</div>'; progressBar.style.display = 'none'; };
+                img.src = URL.createObjectURL(stegoImageFile);
+            } catch (e) { resultDiv.innerHTML = `<div class="result error">❌ Processing failed: ${e.message}</div>`; progressBar.style.display = 'none'; }
+        }
+
+        function updateProgress(fill, pct) { fill.style.width = pct + '%'; }
+        function updateSteps(currentStep) {
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById(`step${i}`);
+                if (i < currentStep) step.className = 'step completed';
+                else if (i === currentStep) step.className = 'step active';
+                else step.className = 'step';
+            }
+        }
+        function downloadStegoImage() { if (stegoImageData) { const a = document.createElement('a'); a.href = URL.createObjectURL(stegoImageData); a.download = 'stego_image.png'; a.click(); } }
+        function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => alert('Message copied!')); }
+        function clearEncode() {
+            document.getElementById('message').value = ''; document.getElementById('password').value = ''; document.getElementById('coverImage').value = '';
+            document.getElementById('encodeResult').innerHTML = ''; document.getElementById('encodePreview').style.display = 'none';
+            document.getElementById('encodeProgress').style.display = 'none'; stegoImageData = null; updateSteps(1);
+        }
+        function clearDecode() {
+            document.getElementById('stegoImage').value = ''; document.getElementById('decryptPassword').value = '';
+            document.getElementById('decodeResult').innerHTML = ''; document.getElementById('decodeProgress').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -238,7 +238,7 @@
         }
 
         .questions-container {
-            animation: scrollUp 20s linear infinite;
+            animation: scrollUp 5s linear infinite;
         }
 
         @keyframes scrollUp {
@@ -1140,8 +1140,7 @@
                             <h1>Welcome, CDR. Sai Shobana Sri .H</h1>
                             <p class="timestamp">Last login: July 28, 2025 | 09:45 AM</p>
                         </div>
-                        <!-- New Profile Details Section -->
-<div class="profile-details">
+                        <div class="profile-details">
     <div class="profile-photo-large"></div>
     <div class="profile-info">
         <div class="detail-row">
@@ -1181,51 +1180,36 @@
         </div>
     </div>
 </div>
-                        <div class="status-cards">
-                            <div class="status-card">
-                                <div class="status-info">
-                                    <h3>CHAT</h3>
-                                    <p>3 unseen messqges </p>
-                                    <span class="status-badge active">Active</span>
-                                </div>
-                            </div>
-                            <div class="status-card">
-                                <div class="status-info">
-                                    <h3>StegoSecure</h3>
-                                    <p>Encrypt & Decrypt</p>
-                                </div>
-                            </div>
-                            <div class="status-card" onclick="showApprovals()">
-                                <div class="status-info">
-                                    <h3>REVIEW</h3>
-                                    <p><span id="approvalCount">3</span> Pending Requests</p>
-                                    <span class="status-badge success">Click to Review</span>
-                                </div>
-                            </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="status-cards">
+	<div class="status-card" onclick="window.location.href='chat.html'">
+        <div class="status-info">
+            <h3>CHAT</h3>
+            <p>3 unseen messqges </p>
+            <span class="status-badge active">Active</span>
         </div>
     </div>
+    <div class="status-card" onclick="window.location.href='Stego.html'">
+        <div class="status-info">
+            <h3>StegoSecure</h3>
+            <p>Encrypt & Decrypt</p>
+        </div>
+    </div>
+    <div class="status-card" onclick="showApprovals()">
+        <div class="status-info">
+            <h3>REVIEW</h3>
+            <p><span id="approvalCount">3</span> Pending Requests</p>
+            <span class="status-badge success">Click to Review</span>
+        </div>
+    </div>
+</div>
 
     <script>
         // Add this to your existing JavaScript
         document.addEventListener('DOMContentLoaded', function() {
-            // Duplicate questions for seamless scrolling
-            const questionsContainer = document.querySelector('.questions-container');
+            // Duplicate questions for seamless scrolling on the correct container
+            const questionsContainer = document.querySelector('.questions-container:not(.original)');
             const originalContent = questionsContainer.innerHTML;
             questionsContainer.innerHTML = originalContent + originalContent;
-
-            // Pause animation on hover
-            document.querySelector('.questions-scroll').addEventListener('mouseenter', function() {
-                document.querySelector('.questions-container').style.animationPlayState = 'paused';
-            });
-
-            document.querySelector('.questions-scroll').addEventListener('mouseleave', function() {
-                document.querySelector('.questions-container').style.animationPlayState = 'running';
-            });
 
             // Search functionality
             const searchInput = document.querySelector('.sidebar-header .search-input');
@@ -1395,7 +1379,8 @@ document.addEventListener('click', function(event) {
 // Enhanced scrolling with smooth hover effects
 document.addEventListener('DOMContentLoaded', function() {
     const questionsScroll = document.querySelector('.questions-scroll');
-    const questionsContainer = document.querySelector('.questions-container');
+    // FIX: Target the visible questions container that is not the hidden 'original' one.
+    const questionsContainer = document.querySelector('.questions-container:not(.original)');
     let currentHighlighted = null;
     
     // Enhanced pause/resume animation
