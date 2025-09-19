@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureComm</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                radial-gradient(circle at 25% 25%, rgba(74, 222, 128, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(34, 211, 238, 0.02) 0%, transparent 50%);
+            background-size: 40px 40px, 40px 40px, 200px 200px, 300px 300px;
+            pointer-events: none;
+            z-index: -1;
+            animation: gridPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 1000px;
+            height: 1000px;
+            background: conic-gradient(from 0deg, transparent 340deg, rgba(74, 222, 128, 0.1) 350deg, rgba(74, 222, 128, 0.05) 360deg);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            pointer-events: none;
+            z-index: -1;
+            animation: radarSweep 12s linear infinite;
+        }
+
+        @keyframes radarSweep {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 40px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid rgba(74, 222, 128, 0.4);
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4ade80, #22d3ee, #4ade80, transparent);
+            animation: headerScan 3s ease-in-out infinite;
+        }
+
+        @keyframes headerScan {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ade80;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+
+        .logo::before {
+            content: '';
+            width: 55px;
+            height: 55px;
+            background-image: url('logo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: inline-block;
+            animation: logoGlow 5s ease-in-out infinite;
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { 
+                filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.8));
+                transform: scale(1);
+            }
+            50% { 
+                filter: drop-shadow(0 0 25px rgba(74, 222, 128, 1));
+                transform: scale(1.1);
+            }
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .auth-btn {
+            padding: 12px 28px;
+            border: 2px solid #4ade80;
+            background: transparent;
+            color: #4ade80;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .auth-btn:hover::before {
+            left: 100%;
+        }
+
+        .auth-btn:hover {
+            background: rgba(74, 222, 128, 0.15);
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+            transform: translateY(-2px);
+            border-color: #22d3ee;
+            color: #22d3ee;
+        }
+
+        .main-content {
+            margin-top: 120px;
+            padding: 40px 20px;
+        }
+
+        .title-section {
+            text-align: center;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .title {
+            font-size: 56px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #4ade80, #22d3ee, #fbbf24, #4ade80);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            animation: titleGradient 4s ease-in-out infinite;
+            text-shadow: 0 0 50px rgba(74, 222, 128, 0.3);
+        }
+
+        @keyframes titleGradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: #94a3b8;
+            max-width: 700px;
+            margin: 0 auto;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        .subtitle::before {
+            content: '> ';
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .action-section {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 80px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 550px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 18px 60px 18px 25px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(74, 222, 128, 0.5);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.4s ease;
+            font-family: 'Courier New', monospace;
+        }
+
+        .search-input:focus {
+            border-color: #4ade80;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4ade80;
+            font-size: 20px;
+            animation: searchPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes searchPulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .post-question-btn {
+            padding: 18px 35px;
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            border: none;
+            border-radius: 12px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            white-space: nowrap;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(74, 222, 128, 0.3);
+        }
+
+        .question-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .question-form {
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #4ade80;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        }
+
+        .form-title {
+            color: #4ade80;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+
+        .question-textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(74, 222, 128, 0.5);
+            border-radius: 10px;
+            color: #fff;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            resize: vertical;
+            outline: none;
+            margin-bottom: 20px;
+        }
+
+        .question-textarea:focus {
+            border-color: #4ade80;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .form-btn {
+            padding: 12px 30px;
+            border: 2px solid #4ade80;
+            background: transparent;
+            color: #4ade80;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .form-btn:hover {
+            background: rgba(74, 222, 128, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .form-btn.submit {
+            background: linear-gradient(45deg, #4ade80, #22d3ee);
+            color: #000;
+        }
+        .post-question-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(74, 222, 128, 0.5);
+            background: linear-gradient(45deg, #22d3ee, #4ade80);
+        }
+
+        .scrolling-container {
+            height: 600px;
+            overflow: hidden;
+            position: relative;
+            padding: 0 30px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+        }
+
+        .scroll-column {
+            position: relative;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+        }
+
+        .scroll-column {
+            will-change: transform;
+            backface-visibility: hidden;
+            perspective: 1000px;
+            animation-fill-mode: both;
+            ransform: translateZ(0);
+        }
+
+        .scroll-column:nth-child(1) {
+            animation: scrollDownSmooth 30s linear infinite;
+        }
+
+        .scroll-column:nth-child(2) {
+            animation: scrollUpSmooth 35s linear infinite;
+        }
+
+        .scroll-column:nth-child(3) {
+            animation: scrollDownSmooth 40s linear infinite;
+        }
+
+        @keyframes scrollUpSmooth {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); }
+        }
+
+        @keyframes scrollDownSmooth {
+            0% { transform: translateY(-50%); }
+            100% { transform: translateY(0); }
+        }       
+
+        .question-card {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(20px);
+            transition: all 0.5s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            min-height: 180px;
+        }
+
+        .question-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4ade80, #22d3ee, #fbbf24);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .question-card::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 15px;
+            height: 15px;
+            background: #4ade80;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.6);
+            animation: statusBlink 3s infinite;
+        }
+
+        @keyframes statusBlink {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .question-card:hover {
+            background: rgba(74, 222, 128, 0.12);
+            border-color: #4ade80;
+            transform: translateY(-10px) scale(1.03);
+            box-shadow: 
+                0 25px 60px rgba(0, 0, 0, 0.6),
+                0 0 40px rgba(74, 222, 128, 0.4);
+        }
+
+        .question-card:hover::before {
+            transform: translateX(0);
+        }
+
+        .question-card:hover .question-text {
+            color: #4ade80;
+            text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+        }
+
+        .question-text {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #e2e8f0;
+            line-height: 1.4;
+            transition: all 0.4s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .answer-section {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .answer-section::before {
+            content: '> ';
+            color: #4ade80;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .question-card:hover .answer-section {
+            background: rgba(0, 0, 0, 0.7);
+            border-color: rgba(74, 222, 128, 0.5);
+        }
+
+        .question-card:hover .answer-section::before {
+            opacity: 1;
+        }
+
+        .answer-text {
+            font-size: 15px;
+            color: #cbd5e1;
+            margin-bottom: 18px;
+            line-height: 1.6;
+        }
+
+        .answer-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #64748b;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .session-id {
+            background: rgba(74, 222, 128, 0.25);
+            color: #4ade80;
+            padding: 6px 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border: 1px solid rgba(74, 222, 128, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 11px;
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stars {
+            color: #fbbf24;
+            font-size: 16px;
+            text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+        }
+
+        .rating-value {
+            background: rgba(251, 191, 36, 0.25);
+            color: #fbbf24;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .timestamp {
+            color: #94a3b8;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        @media (max-width: 1024px) {
+            .scrolling-container {
+                gap: 20px;
+                padding: 0 20px;
+            }  
+            .scroll-column {
+                max-width: 320px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px 20px;
+            }
+            .title {
+                font-size: 42px;
+                letter-spacing: 2px;
+            }
+            .action-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            .search-box {
+                max-width: 100%;
+            }
+            .scrolling-container {
+                flex-direction: column;
+                height: 800px;
+                gap: 0;
+            }
+            .scroll-column {
+                max-width: 100%;
+                margin-bottom: 20px;
+            }
+            .scroll-column:nth-child(1), .scroll-column:nth-child(3) {
+                animation: scrollUp 20s linear infinite;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .question-card {
+                padding: 25px;
+            }
+            .title {
+                font-size: 32px;
+            }
+        }
+
+        .question-card:hover::after {
+            animation: dataStream 1s ease-in-out;
+        }
+
+        @keyframes dataStream {
+            0% { 
+                box-shadow: 0 0 15px rgba(74, 222, 128, 0.6);
+                background: #4ade80;
+            }
+            50% { 
+                box-shadow: 0 0 30px rgba(74, 222, 128, 1);
+                background: #22d3ee;
+            }
+            100% { 
+                box-shadow: 0 0 15px rgba(74, 222, 128, 0.6);
+                background: #4ade80;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">SecureComm</div>
+        <div class="auth-buttons">
+            <a href="login.html"><button class="auth-btn">Login</button></a>
+            <a href="register.html"><button class="auth-btn">Register</button></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="title-section">
+            <h1 class="title">Military Grade Communication Hub</h1>
+            <p class="subtitle">Ask questions and get answers from our military community. Browse through discussions and find the information you need.</p>
+        </div>
+        <div class="action-section">
+            <div class="search-box">
+                <input type="text" class="search-input" placeholder="SEARCH ANSWERED QUESTIONS...">
+                <span class="search-icon">🔍</span>
+            </div>
+            <button class="post-question-btn">POST A QUESTION</button>
+        </div>
+        <div class="scrolling-container">
+            <div class="scroll-column">
+                <div class="question-card">
+                    <div class="question-text">Equipment Maintenance Protocols</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Standard maintenance includes daily inspections, weekly deep cleaning, and monthly system checks. All procedures must be logged in the maintenance registry.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_A1B2C3</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.8</span>
+                            </div>
+                            <span class="timestamp">02:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Emergency Leave Request Process</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Emergency leave requests should be submitted through the chain of command immediately. Contact your direct supervisor and fill out Form ML-501.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_X9Y8Z7</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.9</span>
+                            </div>
+                            <span class="timestamp">05:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">New Recruit Training Requirements</div>
+                    <div class="answer-section">
+                        <div class="answer-text">New recruits must complete basic training, specialized unit training, and safety certification courses within the first 6 months.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_M5N6O7</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.2</span>
+                            </div>
+                            <span class="timestamp">1 DAY AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Classified Data Handling Procedures</div>
+                    <div class="answer-section">
+                        <div class="answer-text">All classified materials must be stored in approved containers, accessed only by authorized personnel, and logged in the security tracking system.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_K8L9M0</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.7</span>
+                            </div>
+                            <span class="timestamp">6 HRS AGO</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-column">
+                <div class="question-card">
+                    <div class="question-text">Secure Communication Access</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Access requires proper clearance level and authentication through the military ID system. Contact IT support for initial setup.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_P8Q9R0</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.7</span>
+                            </div>
+                            <span class="timestamp">03:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Uniform Code Regulations</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Uniform regulations are outlined in Manual Section 3.2. Daily uniforms must be pressed, badges properly positioned, and boots polished.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_K3L4M5</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.3</span>
+                            </div>
+                            <span class="timestamp">06:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Incident Reporting Protocol</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Safety incidents must be reported immediately to your commanding officer and logged in the incident reporting system within 24 hours.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_D2E3F4</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.9</span>
+                            </div>
+                            <span class="timestamp">08:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Combat Readiness Standards</div>
+                    <div class="answer-section">
+                        <div class="answer-text">All personnel must maintain weapons proficiency, complete tactical exercises monthly, and pass combat readiness evaluations.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_R5T6Y7</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.5</span>
+                            </div>
+                            <span class="timestamp">4 HRS AGO</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-column">
+                <div class="question-card">
+                    <div class="question-text">Physical Fitness Requirements</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Physical fitness tests are conducted quarterly. Requirements include push-ups, sit-ups, and timed runs based on age and gender categories.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_G6H7I8</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.1</span>
+                            </div>
+                            <span class="timestamp">04:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Medical Appointment Scheduling</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Medical appointments can be scheduled through the base medical center or online portal. Emergency medical needs should go through proper channels.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_T1U2V3</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.6</span>
+                            </div>
+                            <span class="timestamp">07:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Transfer Documentation Required</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Transfer requests require Form T-200, medical clearance, security clearance verification, and approval from both current and receiving commands.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_W4X5Y6</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.4</span>
+                            </div>
+                            <span class="timestamp">12:00 AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Security Clearance Renewal</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Security clearances must be renewed every 5-10 years depending on level. Begin renewal process 6 months before expiration.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_N7P8Q9</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.8</span>
+                            </div>
+                            <span class="timestamp">2 HRS AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Cybersecurity Incident Response</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Report all suspected cyber incidents to the Cyber Defense Unit within 1 hour. Initiate system lockdown protocols and preserve all logs for investigation.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_CYB321</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐⭐⭐⭐</span>
+                                <span class="rating-value">4.9</span>
+                            </div>
+                            <span class="timestamp">20 MINS AGO</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="question-card">
+                    <div class="question-text">Night Patrol Duty Guidelines</div>
+                    <div class="answer-section">
+                        <div class="answer-text">Personnel must carry NVG equipment, report every hour to base control, and follow silent movement protocols during night patrol operations.</div>
+                        <div class="answer-meta">
+                            <span class="session-id">SESS_NPD123</span>
+                            <div class="rating">
+                                <span class="stars">⭐⭐</span>
+                                <span class="rating-value">2.3</span>
+                            </div>
+                            <span class="timestamp">3 HRS AGO</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="question-popup" id="questionPopup">
+        <div class="question-form">
+            <h3 class="form-title">Post Your Question</h3>
+            <textarea class="question-textarea" placeholder="Type your question here..." id="questionText"></textarea>
+            <div class="form-buttons">
+                <button class="form-btn" onclick="closeQuestionPopup()">Cancel</button>
+                <button class="form-btn submit" onclick="submitQuestion()">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.scroll-column').forEach(column => {
+            const originalContent = column.innerHTML;
+            column.innerHTML = originalContent + originalContent;
+        });
+
+        document.querySelector('.search-input').addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+            this.parentElement.style.boxShadow = '0 0 30px rgba(74, 222, 128, 0.3)';
+        });
+
+        document.querySelector('.search-input').addEventListener('blur', function() {
+            this.parentElement.style.transform = 'scale(1)';
+            this.parentElement.style.boxShadow = 'none';
+        });
+
+        document.querySelectorAll('.question-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                const column = this.closest('.scroll-column');
+                column.style.animationPlayState = 'paused';
+                column.style.willChange = 'auto';
+            });
+            card.addEventListener('mouseleave', function() {
+                const column = this.closest('.scroll-column');
+                column.style.animationPlayState = 'running';
+                column.style.willChange = 'transform';
+            });
+            card.addEventListener('click', function() {
+                this.style.transform = 'translateY(-8px) scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = 'translateY(-8px) scale(1.02)';
+                }, 150);
+            });
+        });
+
+        document.querySelector('.post-question-btn').addEventListener('click', function() {
+            document.getElementById('questionPopup').style.display = 'flex';
+        });
+
+        function closeQuestionPopup() {
+            document.getElementById('questionPopup').style.display = 'none';
+            document.getElementById('questionText').value = '';
+        }
+
+        function submitQuestion() {
+            const questionText = document.getElementById('questionText').value.trim();
+            if (questionText) {
+                alert('🎖️ SUCCESS: Question Posted Successfully!\nYour question has been submitted to the command center.');
+                closeQuestionPopup();
+            } else {
+                alert('⚠️ Please enter a question before submitting.');
+            }
+        }
+        
+        document.querySelector('.search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                alert('🔍 SCANNING CLASSIFIED DATABASE\nSearch functionality will be implemented in next deployment.');
+            }
+        });
+        
+        const searchInput = document.querySelector('.search-input');
+        const originalPlaceholder = searchInput.placeholder;
+        let isTyping = false;
+
+        searchInput.addEventListener('focus', function() {
+            if (!isTyping) {
+                isTyping = true;
+                this.placeholder = '';
+                let i = 0;
+                const typeInterval = setInterval(() => {
+                    if (i < originalPlaceholder.length) {
+                        this.placeholder += originalPlaceholder.charAt(i);
+                        i++;
+                    } else {
+                        clearInterval(typeInterval);
+                        isTyping = false;
+                    }
+                }, 50);
+            }
+        });
+    </script>
+</body>
+</html>
