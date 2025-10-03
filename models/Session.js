@@ -4,15 +4,15 @@ const { v4: uuidv4 } = require('uuid');
 
 const sessionSchema = new mongoose.Schema({
   session_id: {
-  type: String,
-  required: true,
-  unique: true,
-  default: function() {
-    const timestamp = Date.now().toString().slice(-3);
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `SES-${timestamp}${random.substring(0, 3)}`;
-  }
-},
+    type: String,
+    required: true,
+    unique: true,
+    default: function() {
+      const timestamp = Date.now().toString().slice(-3);
+      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+      return `SES-${timestamp}${random.substring(0, 3)}`;
+    }
+  },
   military_id: {
     type: String,
     required: true,
@@ -32,7 +32,8 @@ const sessionSchema = new mongoose.Schema({
     required: true
   }
 }, {
-  timestamps: true
+  timestamps: false,  // Changed from true to false
+  versionKey: false   // Added to remove __v field
 });
 
 // Static method to create a new session

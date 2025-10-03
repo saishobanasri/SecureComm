@@ -2,11 +2,11 @@
 const mongoose = require("mongoose");
 
 const approvalSchema = new mongoose.Schema({
-  approval_id: { type: String, index: true },   // generated, not unique initially
+  approval_id: { type: String, index: true },
   subordinate_id: { 
     type: String, 
     required: true,
-    unique: true, // Add unique constraint here instead of compound index
+    unique: true,
     validate: {
       validator: v => /^IC-\d{5}$/.test(v),
       message: "Service ID must be in format IC-12345"
@@ -25,13 +25,16 @@ const approvalSchema = new mongoose.Schema({
   approved_by: { type: String, default: null },
   approved_date: { type: Date, default: null },
   rejection_reason: { type: String, default: null }
-}, { timestamps: true });
+}, { 
+  timestamps: false,  // Changed from true to false
+  versionKey: false   // Added to remove __v field
+});
 
 // Auto-generate sequential approval_id
 approvalSchema.pre("save", async function(next) {
   if (!this.approval_id) {
     try {
-      const last = await mongoose.model("Approval").findOne({}, {}, { sort: { createdAt: -1 } });
+      const last = await mongoose.model("Approval").findOne({}, {}, { sort: { _id: -1 } });
       let seq = 1;
       if (last && last.approval_id) {
         const lastNum = parseInt(last.approval_id.split("-")[1], 10);
@@ -44,8 +47,5 @@ approvalSchema.pre("save", async function(next) {
   }
   next();
 });
-
-// Remove the problematic compound index - use separate unique constraints instead
-// approvalSchema.index({ subordinate_id: 1, status: 1 }, { unique: true }); // REMOVED
 
 module.exports = mongoose.model("Approval", approvalSchema);

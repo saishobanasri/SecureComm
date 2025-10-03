@@ -14,7 +14,10 @@ const approverSchema = new mongoose.Schema({
   approval_status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   approval_date: { type: Date, default: null },
   comments: { type: String, default: null }
-}, { timestamps: true });
+}, { 
+  timestamps: false,  // Changed from true to false
+  versionKey: false   // Added to remove __v field
+});
 
 // Compound index → one approver per approval
 approverSchema.index({ approver_id: 1, approval_id: 1 }, { unique: true });
