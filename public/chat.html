@@ -135,6 +135,9 @@
             font-weight: bold;
             opacity: 0.7;
             padding: 0 5px;
+            font-size: 16px; /* Make emoji visible */
+            right: 8px;
+            color: #555;
         }
         .message:hover .delete-msg-btn {
             display: block; /* Show on hover */
@@ -147,13 +150,132 @@
         .message.received .delete-msg-btn { 
             display: none;
         }
+
+        .message.received:hover .delete-msg-btn {
+             display: block; /* Show on received as well */
+             color: #94a3b8; /* Lighter color */
+             right: 8px; /* Align with sent messages */
+        }
         .delete-msg-btn:hover {
             opacity: 1;
         }
         /* --- END OF MODIFIED/NEW STYLES --- */
+        /* --- STYLES FOR DELETE MODAL --- */
+        .delete-modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 3000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px); /* Match your site blur */
+            justify-content: center;
+            align-items: center;
+        }
 
+        .delete-modal-content {
+            background: rgba(0, 0, 0, 0.9); /* Dark background */
+            border: 2px solid rgba(74, 222, 128, 0.3); /* Green border */
+            border-radius: 15px; /* Match your other modals */
+            padding: 30px;
+            width: 90%;
+            max-width: 350px; /* A bit wider */
+            text-align: center;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            font-family: 'Courier New', monospace;
+        }
+
+        .delete-modal-content h3 {
+            color: #4ade80; /* SecureComm Green */
+            margin-bottom: 25px;
+            font-size: 1.4em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .delete-modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .delete-modal-btn {
+            padding: 12px;
+            border: 2px solid;
+            border-radius: 8px; /* Match other buttons */
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: transparent;
+        }
+        
+        .delete-modal-btn:hover {
+            transform: translateY(-2px); /* Hover effect */
+        }
+
+        /* "Delete for Me" Button Style (Yellow Warning) */
+        .delete-modal-btn.delete-me {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .delete-modal-btn.delete-me:hover {
+            background: rgba(239, 68, 68, 0.1);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+        
+        /* "Delete for Everyone" Button Style (Red Danger) */
+        .delete-modal-btn.delete-all {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .delete-modal-btn.delete-all:hover {
+            background: rgba(239, 68, 68, 0.1);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+        
+        /* "Cancel" Button Style (Green/Neutral) */
+        .delete-modal-btn.delete-cancel {
+            border-color: #64748b; /* Gray */
+            color: #64748b;
+        }
+        .delete-modal-btn.delete-cancel:hover {
+            background: rgba(100, 116, 139, 0.1);
+            border-color: #4ade80; /* Hover to green */
+            color: #4ade80;
+        }
+
+
+        /* --- MODIFY EXISTING .delete-msg-btn --- */
+        .delete-msg-btn {
+            position: absolute;
+            top: 2px;
+            font-size: 20px; /* Larger for the 'x' */
+            line-height: 1; /* Align it */
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+            opacity: 0.7;
+            padding: 0 5px;
+            right: 8px; /* Position on the right */
+            color: #555; /* Dark on light bubble */
+        }
+        .message:hover .delete-msg-btn {
+            display: block; /* Show on hover */
+        }
+        .message.received:hover .delete-msg-btn {
+            display: block;
+            color: #94a3b8; /* Lighter on dark bubble */
+        }
+        .delete-msg-btn:hover {
+            opacity: 1;
+        }
+            
 
         /* MODAL STYLES */
+
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center; }
         .modal-content { background: rgba(10, 10, 20, 0.95); padding: 30px; border: 2px solid #4ade80; border-radius: 15px; width: 90%; max-width: 700px; position: relative; box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5); }
         .modal-content h2 { color: #4ade80; margin-bottom: 20px; text-align: center; }
@@ -234,45 +356,42 @@
             <div class="form-group"><label for="messageText">Message:</label><textarea id="messageText" class="form-textarea" placeholder="Type your message..."></textarea></div>
             <div class="form-group"><label>Post As:</label><div class="radio-group"><label><input type="radio" name="anonymity" value="public" checked> Not Anonymous</label><label><input type="radio" name="anonymity" value="anonymous"> Anonymous</label></div></div>
             <div class="form-group"><label>Visible To:</label><div class="checkbox-group"><label><input type="checkbox" id="interUnitCheckbox"> Inter-Unit</label><label><input type="checkbox" id="intraUnitCheckbox"> Intra-Unit</label></div></div>
-            <div class="modal-buttons"><button class="modal-btn btn-cancel" onclick="closePostQuestionModal()">Cancel</button><button class="modal-btn btn-send" onclick="submitQuestion()">Send</button></div>
+            <div class="modal-buttons"><button class="modal-btn btn-cancel" onclick="cancelPostQuestion()">Cancel</button><button class="modal-btn btn-send" onclick="submitQuestion()">Send</button></div>
         </div>
     </div>
-    <div class="modal" id="intraUnitSelectModal">
+    <div class="modal" id="recipientSelectModal">
         <div class="modal-content">
-            <h3>Select Intra-Unit Recipients</h3>
-            <div class="recipients-list">
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="p1" class="recipient-checkbox"> SGT. Mike Ross</label></div>
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="p2" class="recipient-checkbox"> LT. John Smith</label></div>
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="p3" class="recipient-checkbox"> CPT. Sarah Connor</label></div>
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="p4" class="recipient-checkbox"> PFC. Jane Doe</label></div>
+            <h3 id="recipientModalTitle" style="color: #22d3ee; margin-bottom: 15px;">Select Recipients</h3>
+            <div class="recipients-list" id="recipientModalList" style="max-height: 300px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.4); border-radius: 8px;">
+                <p style="color: #64748b;">Loading...</p>
             </div>
-            <div class="modal-buttons">
-                <button class="modal-btn btn-cancel" onclick="cancelIntraUnitSelection()">Cancel</button>
-                <button class="modal-btn btn-done" id="intraUnitDoneBtn" onclick="closeIntraUnitModal()" disabled>Done</button>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="modal-btn btn-cancel" onclick="cancelRecipientSelection()">Cancel</button>
+                <button class="modal-btn btn-done" id="recipientDoneBtn" onclick="closeRecipientModal()" disabled>Done</button>
             </div>
         </div>
     </div>
-    <div class="modal" id="interUnitSelectModal">
-        <div class="modal-content">
-            <h3>Select Inter-Unit Recipients</h3>
-            <div class="recipients-list">
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="u1" class="inter-recipient-checkbox"> Alpha Company</label></div>
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="u2" class="inter-recipient-checkbox"> Bravo Team</label></div>
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="u3" class="inter-recipient-checkbox"> Charlie Platoon</label></div>
-                <div class="recipient-item checkbox-group"><label><input type="checkbox" value="u4" class="inter-recipient-checkbox"> Delta Squad</label></div>
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-btn btn-cancel" onclick="cancelInterUnitSelection()">Cancel</button>
-                <button class="modal-btn btn-done" id="interUnitDoneBtn" onclick="closeInterUnitModal()" disabled>Done</button>
+    <div class="delete-modal" id="deleteMessageModal">
+        <div class="delete-modal-content">
+            <h3>Delete Message</h3>
+            <div class="delete-modal-buttons">
+                <button class="delete-modal-btn delete-me" id="deleteForMeBtn">Delete for Me</button>
+                <button class="delete-modal-btn delete-all" id="deleteForEveryoneBtn">Delete for Everyone</button>
+                <button class="delete-modal-btn delete-cancel" onclick="closeDeleteModal()">Cancel</button>
             </div>
         </div>
     </div>
     <script>
     // --- GLOBAL VARS ---
     let loggedInMilitaryId = null;
-    let currentOpenChatId = null;
+    let currentOpenChatState = { id: null, anonymous: false };
     let myPrivateKey = null; // Will hold our decrypted private key
     let keyCache = new Map(); // Caches public keys of other users
+    let currentMessageToDelete = null;
+    let selectedRecipients = [];
+    let myUnitId = null;
+    let allProfilesCache = []; // Caches all profiles for sorting
+    let currentRecipientModal = null;
 
     // --- DOM ELEMENTS ---
     const chatList = document.querySelector('.chat-items');
@@ -285,6 +404,11 @@
     const chatInput = document.querySelector('.chat-input');
     const searchInput = document.querySelector('.search-input');
     const deleteChatBtn = document.getElementById('deleteChatBtn');
+    const recipientSelectModal = document.getElementById('recipientSelectModal');
+    const recipientModalTitle = document.getElementById('recipientModalTitle');
+    const recipientModalList = document.getElementById('recipientModalList');
+    const recipientDoneBtn = document.getElementById('recipientDoneBtn');
+
 
     // ======================================================
     // --- START: CRYPTO FUNCTIONS (Ported from crypto-utils.js) ---
@@ -435,84 +559,330 @@
         return data.publicKey;
     }
 
-    // ======================================================
-    // --- END: CRYPTO FUNCTIONS ---
-    // ======================================================
+    let ws = null;
+let reconnectInterval = null;
+let isIntentionalDisconnect = false;
 
-    /**
-     * Runs when the page is loaded.
-     */
-    document.addEventListener('DOMContentLoaded', async function() {
-        // --- HIERARCHY MODAL SCRIPT ---
-        setupModalListeners();
+/**
+ * Connects to the WebSocket server
+ */
+function connectWebSocket() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log('WebSocket already connected');
+        return;
+    }
 
-        // --- CHAT SCRIPT ---
-        loggedInMilitaryId = localStorage.getItem('militaryId');
-        if (!loggedInMilitaryId) {
-            chatPlaceholder.innerHTML = '<p>Error: Not logged in. Please <a href="/login">log in</a>.</p>';
-            return;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
+    
+    console.log('🔌 Connecting to WebSocket:', wsUrl);
+    
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+        console.log('✅ WebSocket connected');
+        
+        // Authenticate with the server
+        ws.send(JSON.stringify({
+            type: 'auth',
+            militaryId: loggedInMilitaryId
+        }));
+
+        // Clear any reconnection attempts
+        if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
         }
-        console.log(`Logged in as: ${loggedInMilitaryId}`);
 
-        // --- RE-GENERATE PRIVATE KEY ---
+        // Update UI to show connection status
+        updateConnectionStatus(true);
+    };
+
+    ws.onmessage = (event) => {
         try {
-            const sessionStr = sessionStorage.getItem('activeSession');
-            if (!sessionStr) throw new Error('Active session not found. Please log in again.');
-            
-            const session = JSON.parse(sessionStr);
-            const myPassword = session.password;
-            const mySalt = session.profile.salt;
-
-            if (!myPassword || !mySalt) {
-                throw new Error('Session is missing password or salt. Please log in again.');
-            }
-
-            console.log('🔑 Re-generating private key from password and salt...');
-            const { privateKey } = generateKeys(myPassword, mySalt);
-            myPrivateKey = privateKey; // Store it in our global variable
-            console.log('✅ Private key re-generated successfully.');
-
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
         } catch (error) {
-            console.error('CRITICAL: Could not generate private key.', error);
-            chatPlaceholder.innerHTML = `<p style="color: #ef4444;"><b>Fatal Error:</b> Could not initialize security keys. ${error.message}</p>`;
-            return;
+            console.error('❌ Error parsing WebSocket message:', error);
         }
-        // --- END KEY GENERATION ---
+    };
 
+    ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        updateConnectionStatus(false);
+    };
+
+    ws.onclose = () => {
+        console.log('🔌 WebSocket disconnected');
+        updateConnectionStatus(false);
         
-        await loadChatList();
-        
-        // --- EVENT LISTENERS ---
-        searchInput.addEventListener('input', handleSearch);
-        deleteChatBtn.addEventListener('click', hideCurrentChat);
-        sendButton.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
+        // Attempt to reconnect unless it was intentional
+        if (!isIntentionalDisconnect) {
+            attemptReconnect();
+        }
+    };
+}
+
+/**
+ * Handles incoming WebSocket messages
+ */
+async function handleWebSocketMessage(data) {
+    console.log('📨 Received WebSocket message:', data.type);
+
+    switch (data.type) {
+        case 'auth_success':
+            console.log('✅ WebSocket authentication successful');
+            break;
+
+        case 'new_message':
+            await handleNewMessageNotification(data.message);
+            break;
+
+        case 'typing':
+            handleTypingIndicator(data);
+            break;
+
+        default:
+            console.log('Unknown message type:', data.type);
+    }
+}
+
+/**
+ * Handles real-time message notifications
+ */
+async function handleNewMessageNotification(message) {
+    console.log('📬 New message received via WebSocket');
+
+    // Reload chat list to show new conversation/update preview
+    await loadChatList();
+
+    // If the chat is currently open with this person, decrypt and display
+    const isFromCurrentChat = 
+        (message.senderId === currentOpenChatState.id && message.receiverId === loggedInMilitaryId) ||
+        (message.receiverId === currentOpenChatState.id && message.senderId === loggedInMilitaryId);
+
+    if (isFromCurrentChat && message.isAnonymous === currentOpenChatState.anonymous) {
+        const isSent = message.senderId === loggedInMilitaryId;
+        const msgTime = new Date(message.createdAt).toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
         });
+        
+        let messageText = "";
+        
+        try {
+            if (isSent) {
+                // This shouldn't happen (we already added it), but just in case
+                messageText = message.senderCopy ? 
+                    decryptMessage(message.senderCopy, myPrivateKey) : 
+                    "[Sent by You]";
+            } else {
+                // Decrypt the received message
+                messageText = decryptMessage(message.messageText, myPrivateKey);
+            }
+        } catch (e) {
+            console.error('Decryption failed:', e);
+            messageText = "[DECRYPTION FAILED]";
+        }
+        
+        // Add message to UI
+        appendMessage(messageText, isSent, msgTime, message._id, isSent);
+    } else {
+        // Show a notification or badge (optional)
+        console.log('💬 New message in another conversation');
+    }
+}
+
+/**
+ * Handles typing indicators (optional feature)
+ */
+function handleTypingIndicator(data) {
+    if (data.senderId === currentOpenChatState.id) {
+        const statusElement = document.getElementById('chat-status');
+        if (data.isTyping) {
+            statusElement.textContent = 'typing...';
+            statusElement.style.color = '#4ade80';
+        } else {
+            statusElement.textContent = currentOpenChatState.anonymous ? 
+                'Anonymous Session' : 'Military ID';
+            statusElement.style.color = '#94a3b8';
+        }
+    }
+}
+
+/**
+ * Sends typing indicator to recipient (optional)
+ */
+function sendTypingIndicator(isTyping) {
+    if (ws && ws.readyState === WebSocket.OPEN && currentOpenChatState.id) {
+        ws.send(JSON.stringify({
+            type: 'typing',
+            recipientId: currentOpenChatState.id,
+            isTyping: isTyping
+        }));
+    }
+}
+
+/**
+ * Attempts to reconnect to WebSocket
+ */
+function attemptReconnect() {
+    if (reconnectInterval) return;
+    
+    console.log('🔄 Attempting to reconnect WebSocket...');
+    
+    reconnectInterval = setInterval(() => {
+        if (!ws || ws.readyState === WebSocket.CLOSED) {
+            connectWebSocket();
+        }
+    }, 5000); // Try every 5 seconds
+}
+
+/**
+ * Updates UI to show connection status
+ */
+function updateConnectionStatus(isConnected) {
+    // You can add a status indicator in your header
+    // For now, just log it
+    console.log(isConnected ? '🟢 Connected' : '🔴 Disconnected');
+    
+    // Optional: Add a visual indicator
+    // const indicator = document.getElementById('connection-indicator');
+    // if (indicator) {
+    //     indicator.className = isConnected ? 'connected' : 'disconnected';
+    // }
+}
+
+/**
+ * Disconnects WebSocket (call on logout)
+ */
+function disconnectWebSocket() {
+    isIntentionalDisconnect = true;
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
+    if (reconnectInterval) {
+        clearInterval(reconnectInterval);
+        reconnectInterval = null;
+    }
+}
+    document.addEventListener('DOMContentLoaded', async function() {
+    setupModalListeners();
+    
+    loggedInMilitaryId = localStorage.getItem('militaryId'); 
+
+    if (!loggedInMilitaryId) {
+        chatPlaceholder.innerHTML = '<p>Error: Not logged in. Please <a href="/login">log in</a>.</p>';
+        return;
+    }
+    console.log(`Logged in as: ${loggedInMilitaryId}`);
+
+    // Initialize crypto keys (your existing code)
+    try {
+        const sessionStr = sessionStorage.getItem('activeSession');
+        if (!sessionStr) throw new Error('Active session not found. Please log in again.');
+        
+        const session = JSON.parse(sessionStr);
+        const myPassword = session.password;
+        const mySalt = session.profile.salt;
+        myUnitId = session.profile.unitId;
+        if (!myUnitId) throw new Error('Unit ID not found in session.');
+
+        if (!myPassword || !mySalt) {
+            throw new Error('Session is missing password or salt. Please log in again.');
+        }
+
+        console.log('🔐 Re-generating private key from password and salt...');
+        const { privateKey } = generateKeys(myPassword, mySalt);
+        myPrivateKey = privateKey;
+        console.log('✅ Private key re-generated successfully.');
+
+    } catch (error) {
+        console.error('CRITICAL: Could not generate private key.', error);
+        chatPlaceholder.innerHTML = `<p style="color: #ef4444;"><b>Fatal Error:</b> Could not initialize security keys. ${error.message}</p>`;
+        return;
+    }
+
+    // 🆕 NEW: Connect to WebSocket
+    connectWebSocket();
+    
+    await loadChatList();
+    await loadAllProfiles();
+    
+    // Event listeners (your existing code)
+    searchInput.addEventListener('input', handleSearch);
+    deleteChatBtn.addEventListener('click', hideCurrentChat);
+    sendButton.addEventListener('click', sendMessage);
+    
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
     });
 
+    // 🆕 NEW: Add typing indicator (optional)
+    let typingTimeout;
+    chatInput.addEventListener('input', function() {
+        sendTypingIndicator(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            sendTypingIndicator(false);
+        }, 1000);
+    });
+    
+    document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
+    document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
+
+    // 🆕 NEW: Disconnect WebSocket on page unload
+    window.addEventListener('beforeunload', () => {
+        disconnectWebSocket();
+    });
+});
+    
     /**
      * Fetches the list of conversations from the API.
      */
     async function loadChatList() {
+    try {
+        const response = await fetch(`/api/chat/conversations/${loggedInMilitaryId}`);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+        
+        chatList.innerHTML = '';
+        
+        if (data.conversations.length === 0) {
+            chatList.innerHTML = '<p style="padding: 20px; color: #64748b;">No conversations found.</p>';
+        }
+        
+        data.conversations.forEach(convo => {
+            const chatItem = createChatItem(convo);
+            chatList.appendChild(chatItem);
+        });
+    } catch (error) {
+        console.error('Error loading chat list:', error);
+        chatList.innerHTML = `<p style="padding: 20px; color: #ef4444;">Error loading chats.</p>`;
+    }
+}
+
+    /**
+     * --- NEW FUNCTION ---
+     * Fetches all profiles from the server and caches them.
+     */
+    async function loadAllProfiles() {
+        if (allProfilesCache.length > 0) return; // Don't re-fetch
+
         try {
-            const response = await fetch(`/api/chat/conversations/${loggedInMilitaryId}`);
+            console.log("Fetching all profiles for recipient lists...");
+            const response = await fetch(`/api/profiles/list/${loggedInMilitaryId}`);
             const data = await response.json();
             if (!data.success) throw new Error(data.error);
-            chatList.innerHTML = '';
-            if (data.conversations.length === 0) {
-                    chatList.innerHTML = '<p style="padding: 20px; color: #64748b;">No conversations found.</p>';
-            }
-            data.conversations.forEach(convo => {
-                const chatItem = createChatItem(convo);
-                chatList.appendChild(chatItem);
-            });
+            allProfilesCache = data.profiles;
+            console.log(`Cached ${allProfilesCache.length} profiles.`);
         } catch (error) {
-            console.error('Error loading chat list:', error);
-            chatList.innerHTML = `<p style="padding: 20px; color: #ef4444;">Error loading chats.</p>`;
+            console.error('Failed to load profile list:', error);
+            // You could add an error message to the modal here
         }
     }
 
@@ -547,108 +917,134 @@
      * Creates a single chat item element for the sidebar.
      */
     function createChatItem(convo) {
-        const div = document.createElement('div');
-        div.className = 'chat-item';
-        div.dataset.contactId = convo.otherPartyId;
-        const msgTime = new Date(convo.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        // Sanitize preview text
-        const previewText = document.createTextNode(convo.lastMessage).textContent;
+    const div = document.createElement('div');
+    div.className = 'chat-item';
+    div.dataset.contactId = convo.otherPartyId;
+    div.dataset.isAnonymous = convo.isAnonymous; // ← Verify this line exists
+    
+    const msgTime = new Date(convo.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Sanitize preview text
+    const previewText = document.createTextNode(convo.lastMessage).textContent;
 
-        div.innerHTML = `
-            <div class="chat-avatar">${convo.avatar}</div>
-            <div class="chat-info">
-                <div class="chat-name">${convo.name}</div>
-                <div class="chat-preview">${previewText}</div>
-            </div>
-            <div class="chat-meta">
-                <div class="chat-time">${msgTime}</div>
-                ${convo.unread > 0 ? `<div class="unread-badge">${convo.unread}</div>` : ''}
-            </div>
-        `;
-        div.addEventListener('click', () => openChat(convo.otherPartyId, convo.name, convo.avatar));
-        return div;
-    }
+    div.innerHTML = `
+        <div class="chat-avatar">${convo.avatar}</div>
+        <div class="chat-info">
+            <div class="chat-name">${convo.name}</div>
+            <div class="chat-preview">${previewText}</div>
+        </div>
+        <div class="chat-meta">
+            <div class="chat-time">${msgTime}</div>
+            ${convo.unread > 0 ? `<div class="unread-badge">${convo.unread}</div>` : ''}
+        </div>
+    `;
+    
+    // Pass isAnonymous flag to openChat
+    div.addEventListener('click', () => openChat(
+        convo.otherPartyId, 
+        convo.name, 
+        convo.avatar, 
+        convo.isAnonymous // ← Verify this line exists
+    ));
+    
+    return div;
+}
 
     /**
-         * Opens a chat window for a specific contact. (UPDATED for E2EE)
-         */
-        async function openChat(contactId, contactName, contactAvatar) {
-            currentOpenChatId = contactId;
-            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-            document.querySelector(`.chat-item[data-contact-id='${contactId}']`).classList.add('active');
+ * Opens a chat window for a specific contact. (Handles Anonymous IDs)
+ */
+async function openChat(contactId, contactName, contactAvatar, isAnonymous) { // Accept the flag
+    // --- UPDATE HOW STATE IS STORED ---
+    currentOpenChatState = { id: contactId, anonymous: isAnonymous };
 
-            chatPlaceholder.style.display = 'none';
-            chatHeader.style.display = 'flex';
-            chatMessages.style.display = 'flex';
-            chatInputSection.style.display = 'block';
+    // Highlight based on BOTH contactId and isAnonymous
+    document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+    const chatItem = document.querySelector(`.chat-item[data-contact-id='${contactId}'][data-is-anonymous='${isAnonymous}']`);
+    if (chatItem) {
+        chatItem.classList.add('active');
+    } else {
+        console.warn("Could not find chat item to highlight:", contactId, isAnonymous);
+    }
 
-            document.getElementById('chat-header-avatar').textContent = contactAvatar;
-            document.getElementById('chat-title').textContent = contactName;
-            document.getElementById('chat-status').textContent = "Military ID";
-            document.getElementById('deleteChatBtn').title = `Hide conversation with ${contactName}`;
-            document.getElementById('deleteChatBtn').textContent = "Hide";
 
-            chatMessages.innerHTML = '<p style="color: #64748b; text-align: center;">Loading & Decrypting messages...</p>';
+    chatPlaceholder.style.display = 'none';
+    chatHeader.style.display = 'flex';
+    chatMessages.style.display = 'flex';
+    chatInputSection.style.display = 'block';
+
+    // Update header based on anonymity
+    document.getElementById('chat-header-avatar').textContent = isAnonymous ? "AN" : contactAvatar;
+    document.getElementById('chat-title').textContent = contactName; // Name is already correct from server (either ANON-ID or Real ID)
+    document.getElementById('chat-status').textContent = isAnonymous ? "Anonymous Session" : "Military ID";
+    
+    // Update the title on the "Hide Chat" button based on the displayed name
+    const currentChatName = document.getElementById('chat-title').textContent;
+    document.getElementById('deleteChatBtn').title = `Hide conversation with ${currentChatName}`;
+    document.getElementById('deleteChatBtn').textContent = "Hide";
+
+    chatMessages.innerHTML = '<p style="color: #64748b; text-align: center;">Loading & Decrypting messages...</p>';
+
+    try {
+        // --- UPDATE FETCH URL ---
+        // Pass the anonymous flag as a query parameter
+        const response = await fetch(`/api/chat/history/${loggedInMilitaryId}/${contactId}?anonymous=${isAnonymous}`); 
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        chatMessages.innerHTML = ''; // Clear loading
+
+        for (const msg of data.messages) {
+            const isSent = msg.senderId === loggedInMilitaryId;
+            const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            let messageText = "";
+            let allowDelete = false;
 
             try {
-                const response = await fetch(`/api/chat/history/${loggedInMilitaryId}/${contactId}`);
-                const data = await response.json();
-                if (!data.success) throw new Error(data.error);
-
-                chatMessages.innerHTML = ''; // Clear loading
-
-                for (const msg of data.messages) {
-                    const isSent = msg.senderId === loggedInMilitaryId;
-                    const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    
-                    let messageText = "";
-                    let allowDelete = false;
-
-                    try {
-                        if (isSent) {
-                            // We sent this. Decrypt our own copy.
-                            if (!msg.senderCopy) {
-                                // This is an old message, from before we had this feature
-                                messageText = "[Encrypted - Sent by You (Old)]";
-                            } else {
-                                messageText = decryptMessage(msg.senderCopy, myPrivateKey);
-                            }
-                            allowDelete = true; // We can always delete our own messages
-                        } else {
-                            // We received this. Decrypt the main text.
-                            messageText = decryptMessage(msg.messageText, myPrivateKey);
-                        }
-                    } catch (e) {
-                        console.error('Decryption failed for message:', msg._id, e);
-                        messageText = "[DECRYPTION FAILED]";
+                if (isSent) {
+                    // We sent this. Decrypt our own copy.
+                    if (!msg.senderCopy) {
+                        messageText = "[Encrypted - Sent by You (Old)]";
+                    } else {
+                        messageText = decryptMessage(msg.senderCopy, myPrivateKey);
                     }
-                    
-                    appendMessage(messageText, isSent, msgTime, msg._id, allowDelete);
+                    allowDelete = true; 
+                } else {
+                    // We received this. Decrypt the main text.
+                    messageText = decryptMessage(msg.messageText, myPrivateKey);
                 }
-                
-                loadChatList(); 
-
-            } catch (error) {
-                console.error('Error loading chat history:', error);
-                chatMessages.innerHTML = `<p style="padding: 20px; color: #ef4444; text-align: center;">Error loading messages.</p>`;
+            } catch (e) {
+                console.error('Decryption failed for message:', msg._id, e);
+                messageText = "[DECRYPTION FAILED]";
             }
+            
+            appendMessage(messageText, isSent, msgTime, msg._id, allowDelete);
         }
+        
+        loadChatList(); // Update sidebar to potentially mark as read
+
+    } catch (error) {
+        console.error('Error loading chat history:', error);
+        chatMessages.innerHTML = `<p style="padding: 20px; color: #ef4444; text-align: center;">Error loading messages: ${error.message}</p>`;
+    }
+}
 
         /**
-         * Appends a single message bubble to the chat window.
+         * Appends a single message bubble to the chat window. (REPLACE)
          */
         function appendMessage(text, isSent, time, messageId, allowDelete = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
-            messageDiv.dataset.messageId = messageId; // Add ID to the element
+            messageDiv.dataset.messageId = messageId;
 
             const safeText = document.createTextNode(text).textContent;
             
             let deleteBtnHtml = '';
-            // Allow delete only if it's a "real" sent message and has an ID
-            if (isSent && allowDelete && messageId) {
-                 deleteBtnHtml = `<span class="delete-msg-btn" onclick="deleteSingleMessage(this, '${messageId}')" title="Delete message">&times;</span>`;
+            
+            // Allow deleting our own sent messages OR any received message (for-me)
+            if (messageId && (allowDelete || !isSent)) {
+                 // Use a trash can icon and call the new modal function
+                deleteBtnHtml = `<span class="delete-msg-btn" onclick="openDeleteModal(this, '${messageId}', ${isSent})" title="Delete message">&times;</span>`;
             }
 
             messageDiv.innerHTML = `${safeText}<span class="message-time">${time}</span>${deleteBtnHtml}`;
@@ -660,73 +1056,74 @@
          * Sends a new message via the API. (UPDATED for E2EE)
          */
         async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (text === '' || !currentOpenChatId) return;
+    const text = chatInput.value.trim();
+    if (text === '' || !currentOpenChatState.id) return;
 
-            // --- START ENCRYPTION ---
-            let encryptedTextForReceiver;
-            let encryptedTextForSelf; // For our own history
-            
-            try {
-                console.log(`Fetching public key for receiver ${currentOpenChatId}...`);
-                const receiverKey = await fetchKey(currentOpenChatId);
-                console.log('Encrypting message for receiver...');
-                encryptedTextForReceiver = encryptMessage(text, receiverKey);
-                
-                // Now, encrypt a copy for OURSELVES using our OWN public key
-                console.log(`Fetching public key for self ${loggedInMilitaryId}...`);
-                const selfKey = await fetchKey(loggedInMilitaryId); // Will be cached
-                console.log('Encrypting message for self...');
-                encryptedTextForSelf = encryptMessage(text, selfKey);
+    let encryptedTextForReceiver;
+    let encryptedTextForSelf;
+    
+    try {
+        console.log(`Fetching public key for receiver ${currentOpenChatState.id}...`);
+        const receiverKey = await fetchKey(currentOpenChatState.id);
+        console.log('Encrypting message for receiver...');
+        encryptedTextForReceiver = encryptMessage(text, receiverKey);
+        
+        console.log(`Fetching public key for self ${loggedInMilitaryId}...`);
+        const selfKey = await fetchKey(loggedInMilitaryId);
+        console.log('Encrypting message for self...');
+        encryptedTextForSelf = encryptMessage(text, selfKey);
 
-            } catch (error) {
-                console.error('Encryption failed:', error);
-                alert('Error: Could not get encryption keys. Cannot send message.');
-                return;
-            }
-            // --- END ENCRYPTION ---
+    } catch (error) {
+        console.error('Encryption failed:', error);
+        alert('Error: Could not get encryption keys. Cannot send message.');
+        return;
+    }
 
-            const sentText = chatInput.value; // Store plain text
-            chatInput.value = ''; 
+    const sentText = chatInput.value;
+    chatInput.value = ''; 
 
-            try {
-                // --- SEND MESSAGE (with both copies) ---
-                const messageData = {
-                    senderId: loggedInMilitaryId,
-                    receiverId: currentOpenChatId,
-                    messageText: encryptedTextForReceiver, // For receiver
-                    senderCopy: encryptedTextForSelf      // For self
-                };
-                
-                const response = await fetch('/api/chat/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(messageData)
-                });
-                
-                const data = await response.json();
-                if (!data.success) throw new Error(data.error);
-                
-                const msg = data.message;
-                const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                // Append the PLAIN text for our own view
-                appendMessage(sentText, true, msgTime, msg._id, true); 
+    try {
+        const messageData = {
+            senderId: loggedInMilitaryId,
+            receiverId: currentOpenChatState.id,
+            messageText: encryptedTextForReceiver,
+            senderCopy: encryptedTextForSelf,
+            isAnonymous: currentOpenChatState.anonymous
+        };
+        
+        const response = await fetch('/api/chat/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(messageData)
+        });
+        
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+        
+        const msg = data.message;
+        const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        // Add to UI immediately (sender's view)
+        appendMessage(sentText, true, msgTime, msg._id, true);
+        
+        // The receiver will get it via WebSocket automatically
+        await loadChatList();
 
-                await loadChatList(); // Update sidebar
-
-            } catch (error) {
-                console.error('Error sending message:', error);
-                chatInput.value = sentText; // Put failed message back
-                alert('Failed to send message: ' + error.message);
-            }
-        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        chatInput.value = sentText;
+        alert('Failed to send message: ' + error.message);
+    }
+}
 
     /**
      * Hides the currently open conversation.
      */
     async function hideCurrentChat() {
-        if (!currentOpenChatId) {
+        if (!currentOpenChatState.id) {
             alert('No chat selected.');
             return;
         }
@@ -740,7 +1137,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     myId: loggedInMilitaryId,
-                    otherId: currentOpenChatId
+                    otherId: currentOpenChatState.id,
+                    isAnonymous: currentOpenChatState.anonymous
                 })
             });
             const data = await response.json();
@@ -751,7 +1149,7 @@
             chatMessages.style.display = 'none';
             chatInputSection.style.display = 'none';
             chatPlaceholder.style.display = 'flex';
-            currentOpenChatId = null;
+            currentOpenChatState = { id: null, anonymous: false };
             await loadChatList();
 
         } catch (error) {
@@ -760,78 +1158,361 @@
         }
     }
     
-    /**
-     * Deletes a single message from the database.
-     */
-    async function deleteSingleMessage(buttonElement, messageId) {
-        if (!confirm('Are you sure you want to PERMANENTLY delete this message? This cannot be undone.')) {
-            return;
-        }
-        try {
-            const response = await fetch('/api/chat/message', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messageId: messageId,
-                    myId: loggedInMilitaryId
-                })
-            });
-            const data = await response.json();
-            if (!data.success) throw new Error(data.error);
+    // --- START NEW FUNCTIONS (REPLACE deleteSingleMessage) ---
 
-            const messageDiv = buttonElement.closest('.message');
-            if (messageDiv) messageDiv.remove();
-            await loadChatList();
+        /**
+         * Opens the delete confirmation modal.
+         */
+        function openDeleteModal(buttonElement, messageId, isSent) {
+            currentMessageToDelete = messageId; // Store the ID
+            
+            // Show/hide the "Delete for Everyone" button
+            const deleteForEveryoneBtn = document.getElementById('deleteForEveryoneBtn');
+            deleteForEveryoneBtn.style.display = isSent ? 'block' : 'none';
 
-        } catch (error) {
-            console.error('Error deleting message:', error);
-            alert('Failed to delete message: ' + error.message);
+            // Show the modal
+            document.getElementById('deleteMessageModal').style.display = 'flex';
         }
-    }
+
+        /**
+         * Closes the delete confirmation modal.
+         */
+        function closeDeleteModal() {
+            document.getElementById('deleteMessageModal').style.display = 'none';
+            currentMessageToDelete = null;
+        }
+
+        /**
+         * Hides a single message for the current user (soft delete).
+         */
+        async function deleteMessageForMe() {
+            const messageId = currentMessageToDelete;
+            if (!messageId) return;
+
+            try {
+                const response = await fetch('/api/chat/message/hide', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messageId: messageId,
+                        myId: loggedInMilitaryId
+                    })
+                });
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error);
+
+                // Remove from UI
+                const messageDiv = document.querySelector(`.message[data-message-id='${messageId}']`);
+                if (messageDiv) messageDiv.remove();
+                
+                closeDeleteModal();
+                await loadChatList(); // Update sidebar in case it was the last message
+
+            } catch (error) {
+                console.error('Error deleting message for me:', error);
+                alert('Failed to hide message: ' + error.message);
+            }
+        }
+        
+        /**
+         * Deletes a single message for everyone (hard delete).
+         * (This is your renamed deleteSingleMessage function)
+         */
+        async function deleteMessageForEveryone() {
+            const messageId = currentMessageToDelete;
+            if (!messageId) return;
+
+            try {
+                const response = await fetch('/api/chat/message', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messageId: messageId,
+                        myId: loggedInMilitaryId
+                    })
+                });
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error);
+
+                // Remove from UI
+                const messageDiv = document.querySelector(`.message[data-message-id='${messageId}']`);
+                if (messageDiv) messageDiv.remove();
+
+                closeDeleteModal();
+                await loadChatList();
+
+            } catch (error) {
+                console.error('Error deleting message for everyone:', error);
+                alert('Failed to delete message: ' + error.message);
+            }
+        }
+        
+        // --- END NEW FUNCTIONS ---
     
     // ======================================================
-    // --- HIERARCHY / POSTING MODAL SCRIPT (Unchanged) ---
+    // --- HIERARCHY / POSTING MODAL SCRIPT (DYNAMIC) ---
     // ======================================================
+    
+    // Get the main modal elements
     const postQuestionModal = document.getElementById('postQuestionModal');
-    const intraUnitSelectModal = document.getElementById('intraUnitSelectModal');
     const intraUnitCheckbox = document.getElementById('intraUnitCheckbox');
-    const interUnitSelectModal = document.getElementById('interUnitSelectModal');
     const interUnitCheckbox = document.getElementById('interUnitCheckbox');
+
+    /**
+     * Sets up listeners for the main modal's checkboxes.
+     */
     function setupModalListeners() {
-        const recipientCheckboxes = document.querySelectorAll('.recipient-checkbox');
-        const intraUnitDoneBtn = document.getElementById('intraUnitDoneBtn');
-        function updateDoneButtonState() {
-            const anyChecked = Array.from(recipientCheckboxes).some(checkbox => checkbox.checked);
-            intraUnitDoneBtn.disabled = !anyChecked;
-        }
-        recipientCheckboxes.forEach(checkbox => checkbox.addEventListener('change', updateDoneButtonState));
-        const interRecipientCheckboxes = document.querySelectorAll('.inter-recipient-checkbox');
-        const interUnitDoneBtn = document.getElementById('interUnitDoneBtn');
-        function updateInterDoneButtonState() {
-            const anyChecked = Array.from(interRecipientCheckboxes).some(checkbox => checkbox.checked);
-            interUnitDoneBtn.disabled = !anyChecked;
-        }
-        interRecipientCheckboxes.forEach(checkbox => checkbox.addEventListener('change', updateInterDoneButtonState));
-        intraUnitCheckbox.addEventListener('change', function() { if (this.checked) openIntraUnitModal(); });
-        interUnitCheckbox.addEventListener('change', function() { if (this.checked) openInterUnitModal(); });
+        intraUnitCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                openRecipientModal('intra');
+            } else {
+                // Clear Intra-Unit recipients from the list
+                const intraUnitProfiles = allProfilesCache.filter(p => p.unitId === myUnitId).map(p => p.militaryId);
+                selectedRecipients = selectedRecipients.filter(id => !intraUnitProfiles.includes(id));
+                console.log('Cleared Intra-Unit. Total recipients:', selectedRecipients);
+            }
+        });
+
+        interUnitCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                openRecipientModal('inter');
+            } else {
+                // Clear Inter-Unit recipients from the list
+                const interUnitProfiles = allProfilesCache.filter(p => p.unitId !== myUnitId).map(p => p.militaryId);
+                selectedRecipients = selectedRecipients.filter(id => !interUnitProfiles.includes(id));
+                console.log('Cleared Inter-Unit. Total recipients:', selectedRecipients);
+            }
+        });
     }
-    function openPostQuestionModal() { postQuestionModal.style.display = 'flex'; }
-    function closePostQuestionModal() { postQuestionModal.style.display = 'none'; }
-    function submitQuestion() {
-        const messageText = document.getElementById('messageText').value.trim();
-        if (messageText === '') { alert('Please enter a message before sending.'); return; }
-        const isInterUnitChecked = document.getElementById('interUnitCheckbox').checked;
-        const isIntraUnitChecked = document.getElementById('intraUnitCheckbox').checked;
-        if (!isInterUnitChecked && !isIntraUnitChecked) { alert('Please select who the message is visible to (Inter-Unit or Intra-Unit).'); return; }
-        alert('Message Sent (simulation).');
+
+    /**
+     * Opens the dynamic recipient modal.
+     */
+    function openRecipientModal(type) {
+        currentRecipientModal = type; // 'intra' or 'inter'
+        recipientModalList.innerHTML = ''; // Clear old list
+        recipientDoneBtn.disabled = false; // Enable by default
+
+        let filteredProfiles = [];
+        if (type === 'intra') {
+            recipientModalTitle.textContent = 'Select Intra-Unit Recipients';
+            filteredProfiles = allProfilesCache.filter(p => p.unitId === myUnitId);
+        } else {
+            recipientModalTitle.textContent = 'Select Inter-Unit Recipients';
+            filteredProfiles = allProfilesCache.filter(p => p.unitId !== myUnitId);
+        }
+
+        if (filteredProfiles.length === 0) {
+            recipientModalList.innerHTML = '<p style="color: #64748b; padding: 10px;">No profiles found.</p>';
+        } else {
+            // Generate new list
+            filteredProfiles.forEach(profile => {
+                // Pre-check if this ID is already in our global list
+                const isChecked = selectedRecipients.includes(profile.militaryId) ? 'checked' : '';
+                
+                const html = `
+                <div class="recipient-item checkbox-group" style="padding: 5px 0;">
+                    <label>
+                        <input type="checkbox" value="${profile.militaryId}" class="recipient-checkbox" ${isChecked}>
+                        ${profile.militaryId} (Unit: ${profile.unitId} | Role: ${profile.roleId})
+                    </label>
+                </div>`;
+                recipientModalList.innerHTML += html;
+            });
+        }
+        
+        // Attach listeners to the NEW checkboxes inside the modal
+        const recipientCheckboxes = recipientModalList.querySelectorAll('.recipient-checkbox');
+        
+        function updateDoneButtonState() {
+            // This function (re-defined inside) just controls the button
+            const anyChecked = Array.from(recipientCheckboxes).some(checkbox => checkbox.checked);
+            recipientDoneBtn.disabled = !anyChecked;
+        }
+
+        recipientCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateDoneButtonState);
+        });
+        
+        // Check state on load
+        updateDoneButtonState();
+        
+        recipientSelectModal.style.display = 'flex';
+    }
+
+    /**
+     * Closes the recipient modal AND saves the state.
+     */
+    function closeRecipientModal() {
+        recipientSelectModal.style.display = 'none';
+
+        // Get all *possible* recipients that could have been in this modal
+        const modalProfiles = (currentRecipientModal === 'intra')
+            ? allProfilesCache.filter(p => p.unitId === myUnitId).map(p => p.militaryId)
+            : allProfilesCache.filter(p => p.unitId !== myUnitId).map(p => p.militaryId);
+        
+        // Get selections *from this modal*
+        const selectionsInModal = Array.from(
+            recipientModalList.querySelectorAll('.recipient-checkbox:checked')
+        ).map(cb => cb.value);
+
+        // Filter out anyone from this modal who is *no longer* selected
+        selectedRecipients = selectedRecipients.filter(id => !modalProfiles.includes(id));
+
+        // Add back in everyone who *is* selected (prevents duplicates)
+        selectionsInModal.forEach(id => {
+            if (!selectedRecipients.includes(id)) {
+                selectedRecipients.push(id);
+            }
+        });
+
+        // If selectionsInModal is empty, it means the user un-checked everything
+        if (selectionsInModal.length === 0) {
+            // Un-check the main box that opened this modal
+            if (currentRecipientModal === 'intra') {
+                document.getElementById('intraUnitCheckbox').checked = false;
+            } else if (currentRecipientModal === 'inter') {
+                document.getElementById('interUnitCheckbox').checked = false;
+            }
+        }
+
+        console.log(`Total recipients:`, selectedRecipients);
+        currentRecipientModal = null;
+    }
+
+    /**
+     * Cancels selection and unchecks the original box.
+     */
+    function cancelRecipientSelection() {
+        // User clicked "Cancel", so don't save any changes from the recipient modal
+        recipientSelectModal.style.display = 'none';
+        
+        // Also uncheck the main box that opened this modal
+        if (currentRecipientModal === 'intra') {
+            document.getElementById('intraUnitCheckbox').checked = false;
+        } else if (currentRecipientModal === 'inter') {
+            document.getElementById('interUnitCheckbox').checked = false;
+        }
+        
+        currentRecipientModal = null;
+    }
+
+    // --- Main Hierarchy Modal Functions ---
+
+    function openPostQuestionModal() { 
+        postQuestionModal.style.display = 'flex';
+    }
+    
+    function closePostQuestionModal() { 
+        postQuestionModal.style.display = 'none';
+    }
+
+    /**
+     * Resets the post modal to its default state and closes it.
+     */
+    function resetAndClosePostModal() {
+        document.getElementById('messageText').value = '';
+        document.getElementById('interUnitCheckbox').checked = false;
+        document.getElementById('intraUnitCheckbox').checked = false;
+        document.querySelector('input[name="anonymity"][value="public"]').checked = true;
+        selectedRecipients = []; // Clear the global list
         closePostQuestionModal();
     }
-    function openIntraUnitModal() { intraUnitSelectModal.style.display = 'flex'; }
-    function closeIntraUnitModal() { intraUnitSelectModal.style.display = 'none'; }
-    function openInterUnitModal() { interUnitSelectModal.style.display = 'flex'; }
-    function closeInterUnitModal() { interUnitSelectModal.style.display = 'none'; }
-    function cancelIntraUnitSelection() { document.getElementById('intraUnitCheckbox').checked = false; closeIntraUnitModal(); }
-    function cancelInterUnitSelection() { document.getElementById('interUnitCheckbox').checked = false; closeInterUnitModal(); }
+    
+    /**
+     * Attached to the "Cancel" button to reset the form.
+     */
+    function cancelPostQuestion() {
+        resetAndClosePostModal();
+    }
+
+    /**
+     * Submits the message from the hierarchy modal.
+     * Now sends 1-to-1 encrypted chats if "Not Anonymous" is checked.
+     */
+    async function submitQuestion() {
+    const messageText = document.getElementById('messageText').value.trim();
+    const isAnonymous = document.querySelector('input[name="anonymity"]:checked').value === 'anonymous';
+
+    if (messageText === '') {
+        alert('Please enter a message before sending.');
+        return;
+    }
+
+    const isInterChecked = document.getElementById('interUnitCheckbox').checked;
+    const isIntraChecked = document.getElementById('intraUnitCheckbox').checked;
+    
+    if (!isInterChecked && !isIntraChecked) {
+        alert('Please select who the message is visible to (Inter-Unit or Intra-Unit).');
+        return;
+    }
+
+    if (selectedRecipients.length === 0) {
+        alert('Please select at least one recipient using the "Visible To" checkboxes.');
+        return;
+    }
+
+    console.log(`📤 Sending ${isAnonymous ? 'ANONYMOUS' : 'non-anonymous'} message to ${selectedRecipients.length} recipients...`);
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    const sendBtn = postQuestionModal.querySelector('.btn-send');
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'SENDING...';
+
+    // Send one encrypted message to each recipient
+    for (const recipientId of selectedRecipients) {
+        try {
+            console.log(`   → Sending to ${recipientId}...`);
+            
+            // Get recipient's public key
+            const receiverKey = await fetchKey(recipientId);
+            
+            // Get our own public key (for self-copy)
+            const selfKey = await fetchKey(loggedInMilitaryId);
+            
+            // Encrypt for receiver
+            const encryptedTextForReceiver = encryptMessage(messageText, receiverKey);
+            
+            // Encrypt for self
+            const encryptedTextForSelf = encryptMessage(messageText, selfKey);
+
+            // Send to server
+            const messageData = {
+                senderId: loggedInMilitaryId,
+                receiverId: recipientId,
+                messageText: encryptedTextForReceiver,
+                senderCopy: encryptedTextForSelf,
+                isAnonymous: isAnonymous // ← Verify this line exists
+            };
+
+            const response = await fetch('/api/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(messageData)
+            });
+
+            const data = await response.json();
+            if (!data.success) throw new Error(`Server error for ${recipientId}`);
+            
+            successCount++;
+            console.log(`   ✅ Sent to ${recipientId}`);
+
+        } catch (error) {
+            console.error(`   ❌ Failed to send to ${recipientId}:`, error);
+            failCount++;
+        }
+    }
+
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'SEND';
+    
+    alert(`Message sending complete.\n\nSuccessfully sent: ${successCount}\nFailed to send: ${failCount}`);
+
+    await loadChatList();
+    resetAndClosePostModal();
+}
 </script>
 </body>
 </html>

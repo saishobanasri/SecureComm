@@ -8,6 +8,11 @@ const { generateKeys } = require('./utils/crypto-utils');
 const { createStegoImage, decryptStegoImage } = require('./utils/stego-utils');
 const bodyParser = require('body-parser');
 const Message = require('./models/Message');
+const { 
+  getAnonymousSessionIds, 
+  getAnonymousDisplayNames,
+  hasVisibleAnonymousMessages 
+} = require('./anonymousSessionHandler');
 require('dotenv').config();
 
 // Import Models
@@ -18,13 +23,67 @@ const Approver = require('./models/Approver.js');
 const Question = require('./models/Question');
 const Answer = require('./models/Answer');
 const AnswerRating = require('./models/AnswerRating');
-
+const http = require('http');
+const WebSocket = require('ws');
 // Import Routes
 const registerRoute = require("./routes/register");
 
 const bcrypt = require('bcryptjs');
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+// WebSocket connection manager
+const activeConnections = new Map();
+
+wss.on('connection', (ws) => {
+  console.log('🔌 New WebSocket connection');
+  let connectedUserId = null;
+
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      if (data.type === 'auth') {
+        connectedUserId = data.militaryId;
+        activeConnections.set(connectedUserId, ws);
+        console.log(`✅ ${connectedUserId} connected`);
+        ws.send(JSON.stringify({ type: 'auth_success' }));
+      }
+      
+      if (data.type === 'typing') {
+        const recipientWs = activeConnections.get(data.recipientId);
+        if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+          recipientWs.send(JSON.stringify({
+            type: 'typing',
+            senderId: connectedUserId,
+            isTyping: data.isTyping
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('WebSocket error:', error);
+    }
+  });
+
+  ws.on('close', () => {
+    if (connectedUserId) {
+      activeConnections.delete(connectedUserId);
+      console.log(`🔌 ${connectedUserId} disconnected`);
+    }
+  });
+});
+
+// Helper function
+function notifyUser(recipientId, messageData) {
+  const ws = activeConnections.get(recipientId);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'new_message', message: messageData }));
+    return true;
+  }
+  return false;
+}
 const PORT = process.env.PORT || 3000;
 
 // Create uploads directory if it doesn't exist
@@ -807,6 +866,17 @@ app.post('/api/answers/rate', async (req, res) => {
   }
 });
 
+async function getActiveSessionId(militaryId) {
+  const Session = require('./models/Session');
+  
+  const session = await Session.findOne({ 
+    military_id: militaryId,
+    logout_time: null // Only get active sessions (not logged out)
+  }).sort({ login_time: -1 }); // Get the most recent session
+
+  return session ? session.session_id : null;
+}
+
 // Helper function to update answer average rating
 async function updateAnswerAverageRating(answerId) {
   try {
@@ -990,82 +1060,198 @@ app.get('/main', (req, res) => {
  */
 app.post('/api/chat/send', async (req, res) => {
   try {
-    const { senderId, receiverId, messageText, senderCopy } = req.body;
+    const { senderId, receiverId, messageText, senderCopy, isAnonymous } = req.body;
 
-    if (!senderId || !receiverId || !messageText) {
-      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    // ========== Handle Anonymous Messages ==========
+    if (isAnonymous) {
+      // Get current active session IDs for both users
+      const senderSession = await getActiveSessionId(senderId);
+      const receiverSession = await getActiveSessionId(receiverId);
+
+      if (!senderSession || !receiverSession) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'One or both users do not have active sessions' 
+        });
+      }
+
+      console.log(`📤 Sending anonymous message from ${senderId} to ${receiverId}`);
+      console.log(`   Current sessions: ${senderSession} → ${receiverSession}`);
+
+      // Get the persistent session IDs (will reuse old ones or create new)
+      const { sessionA, sessionB, isNewConversation } = 
+        await getAnonymousSessionIds(
+          senderId,
+          senderSession,
+          receiverId,
+          receiverSession
+        );
+
+      console.log(`   Using sessions: ${sessionA} ↔ ${sessionB} (New: ${isNewConversation})`);
+
+      // Create the message with persistent session IDs
+      const message = await Message.create({
+        senderId: senderId,
+        receiverId: receiverId,
+        messageText: messageText,
+        senderCopy: senderCopy,
+        isAnonymous: true,
+        anonymousSenderSession: sessionA,
+        anonymousReceiverSession: sessionB,
+        deletedBy: []
+      });
+
+      console.log(`✅ Anonymous message saved with ID: ${message._id}`);
+      
+      // 🆕 Notify receiver via WebSocket
+      notifyUser(receiverId, message);
+      
+      return res.json({ success: true, message });
     }
-    
-    // You could add a check here to ensure the session_id/military_id matches the senderId
-    
-    const message = new Message({
+
+    // ========== Non-anonymous message ==========
+    const message = await Message.create({
       senderId,
       receiverId,
       messageText,
-      senderCopy
+      senderCopy,
+      isAnonymous: false
     });
 
-    await message.save();
-    
-    // In a real-time app, you would emit this message via WebSockets here
-    
-    res.status(201).json({ success: true, message });
+    // 🆕 Notify receiver via WebSocket
+    notifyUser(receiverId, message);
+
+    res.json({ success: true, message });
 
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error('❌ Error sending message:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
+ * POST /api/chat/message/hide
+ * Hides a single message for the current user (soft delete).
+ */
+app.post('/api/chat/message/hide', async (req, res) => {
+  try {
+    const { messageId, myId } = req.body;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+
+    // Add user to deletedBy array if not already there
+    if (!message.deletedBy.includes(myId)) {
+      message.deletedBy.push(myId);
+      await message.save();
+    }
+
+    res.json({ success: true, message: 'Message hidden' });
+
+  } catch (error) {
+    console.error('Error hiding message:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+/**
  * GET /api/chat/conversations/:militaryId
  * Gets the list of all conversations (chat list) for a user.
  */
-app.get('/api/chat/conversations/:militaryId', async (req, res) => {
+app.get('/api/chat/conversations/:userId', async (req, res) => {
   try {
-    const { militaryId } = req.params;
+    const { userId } = req.params;
 
-    // Find all messages where the user is either the sender or receiver
+    // Get all messages where this user is sender or receiver
+    // EXCLUDE messages that this user has hidden
     const messages = await Message.find({
-      $or: [{ senderId: militaryId }, { receiverId: militaryId }],
-      deletedBy: { $ne: militaryId }
-    }).sort({ createdAt: -1 }); // Sort by most recent first
+      $or: [
+        { senderId: userId },
+        { receiverId: userId }
+      ],
+      deletedBy: { $ne: userId } // Not in this user's deletedBy array
+    }).sort({ createdAt: -1 });
 
-    const conversations = new Map();
+    // Group messages by conversation partner
+    const conversationsMap = new Map();
 
     for (const msg of messages) {
-      // Find the ID of the *other* person in the chat
-      const otherPartyId = msg.senderId === militaryId ? msg.receiverId : msg.senderId;
+      const otherPartyId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+      const isAnonymous = msg.isAnonymous;
 
-      // If we haven't seen this person yet, add them to the map
-      if (!conversations.has(otherPartyId)) {
-        // Find unread message count from this person
-        const unreadCount = await Message.countDocuments({
-          senderId: otherPartyId,
-          receiverId: militaryId,
-          read: false
-        });
+      // Create a unique key for this conversation
+      // Anonymous and non-anonymous chats with same person are separate
+      const convoKey = isAnonymous 
+        ? `${otherPartyId}-ANON` 
+        : otherPartyId;
 
-        conversations.set(otherPartyId, {
+      if (!conversationsMap.has(convoKey)) {
+        let displayName = otherPartyId;
+        let displayAvatar = otherPartyId.substring(3, 5).toUpperCase();
+
+        // ========== NEW: Get persistent session names for anonymous chats ==========
+        if (isAnonymous) {
+          const { otherDisplaySession } = await getAnonymousDisplayNames(userId, otherPartyId);
+          displayName = otherDisplaySession; // Use session ID instead of military ID
+          displayAvatar = 'AN'; // Anonymous avatar
+        }
+        // ========== END NEW CODE ==========
+
+        conversationsMap.set(convoKey, {
           otherPartyId: otherPartyId,
-          lastMessage: "[Encrypted Message]", // For privacy, we don't show message text
+          isAnonymous: isAnonymous,
+          name: displayName,
+          avatar: displayAvatar,
+          lastMessage: 'Encrypted message',
           timestamp: msg.createdAt,
-          unread: unreadCount,
-          // We can fetch the profile to get more details if needed
-          // For now, we just use the ID as requested
-          name: otherPartyId, 
-          avatar: otherPartyId.substring(0, 2) // e.g., "IC"
+          unread: 0
         });
       }
     }
 
-    // Convert the map values to an array and send
-    const chatList = Array.from(conversations.values());
-    
-    res.json({ success: true, conversations: chatList });
+    const conversations = Array.from(conversationsMap.values());
+    res.json({ success: true, conversations });
 
   } catch (error) {
-    console.error('Error fetching conversations:', error);
+    console.error('❌ Error fetching conversations:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}); // End of the route handler
+
+/**
+ * Gets the display names (session IDs) for an anonymous conversation.
+ * Used when opening a chat to show the correct session IDs.
+ */
+app.get('/api/chat/anonymous-display/:myId/:otherId', async (req, res) => {
+  try {
+    const { myId, otherId } = req.params;
+
+    console.log(`📺 Getting display names for ${myId} ↔ ${otherId}`);
+
+    // Check if there are any visible messages
+    const hasMessages = await hasVisibleAnonymousMessages(myId, otherId);
+
+    if (!hasMessages) {
+      // No conversation exists yet or all hidden
+      console.log(`   No visible messages found`);
+      return res.json({ 
+        success: true, 
+        myDisplaySession: 'ANON-NEW', 
+        otherDisplaySession: 'ANON-NEW',
+        isNew: true
+      });
+    }
+
+    // Get the display names from existing messages
+    const names = await getAnonymousDisplayNames(myId, otherId);
+    
+    console.log(`   Display names: You=${names.myDisplaySession}, Other=${names.otherDisplaySession}`);
+    
+    res.json({ success: true, ...names, isNew: false });
+
+  } catch (error) {
+    console.error('❌ Error getting display names:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1077,26 +1263,22 @@ app.get('/api/chat/conversations/:militaryId', async (req, res) => {
 app.get('/api/chat/history/:myId/:otherId', async (req, res) => {
   try {
     const { myId, otherId } = req.params;
+    const { anonymous } = req.query;
+    const isAnonymous = anonymous === 'true';
 
-    // Find all messages between these two users
     const messages = await Message.find({
       $or: [
         { senderId: myId, receiverId: otherId },
         { senderId: otherId, receiverId: myId }
       ],
-      deletedBy: { $ne: myId }
-    }).sort({ createdAt: 1 }); // Sort chronologically (oldest first)
-
-    // Mark messages as read
-    await Message.updateMany(
-      { senderId: otherId, receiverId: myId, read: false, deletedBy: { $ne: myId } },
-      { $set: { read: true } }
-    );
+      isAnonymous: isAnonymous,
+      deletedBy: { $ne: myId } // ← IMPORTANT: Don't show hidden messages
+    }).sort({ createdAt: 1 });
 
     res.json({ success: true, messages });
 
   } catch (error) {
-    console.error('Error fetching message history:', error);
+    console.error('Error fetching chat history:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1150,30 +1332,29 @@ app.get('/api/profiles/search/:myId/:query', async (req, res) => {
  */
 app.post('/api/chat/hide', async (req, res) => {
   try {
-    const { myId, otherId } = req.body;
-    if (!myId || !otherId) {
-      return res.status(400).json({ success: false, error: 'Missing user IDs' });
+    const { myId, otherId, isAnonymous } = req.body;
+
+    const messages = await Message.find({
+      $or: [
+        { senderId: myId, receiverId: otherId },
+        { senderId: otherId, receiverId: myId }
+      ],
+      isAnonymous: isAnonymous
+    });
+
+    let hiddenCount = 0;
+    for (const msg of messages) {
+      if (!msg.deletedBy.includes(myId)) {
+        msg.deletedBy.push(myId);
+        await msg.save();
+        hiddenCount++;
+      }
     }
 
-    // Add `myId` to the `deletedBy` array for all messages in this chat
-    const updateResult = await Message.updateMany(
-      {
-        $or: [
-          { senderId: myId, receiverId: otherId },
-          { senderId: otherId, receiverId: myId }
-        ],
-        deletedBy: { $ne: myId } // Only update if not already hidden
-      },
-      {
-        $addToSet: { deletedBy: myId } // $addToSet prevents duplicates
-      }
-    );
-
-    console.log(`Hid ${updateResult.modifiedCount} messages for ${myId}`);
-    res.json({ success: true, hiddenCount: updateResult.modifiedCount });
+    res.json({ success: true, hiddenCount });
 
   } catch (error) {
-    console.error('Error hiding message history:', error);
+    console.error('Error hiding conversation:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1233,6 +1414,29 @@ app.get('/api/profile/key/:militaryId', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/profiles/list/:myId
+ * Gets a list of all profiles (ID, Unit, Role) to populate recipient lists,
+ * excluding the user who is logged in.
+ */
+app.get('/api/profiles/list/:myId', async (req, res) => {
+  try {
+    const { myId } = req.params;
+
+    // Find all profiles *except* the user's own
+    const profiles = await Profile.find(
+      { militaryId: { $ne: myId } },
+      { militaryId: 1, unitId: 1, roleId: 1, _id: 0 } // Only select these fields
+    ).lean(); // .lean() makes it faster, returns plain JS objects
+
+    res.json({ success: true, profiles: profiles });
+
+  } catch (error) {
+    console.error('Error fetching profile list:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   if (error.code === 'LIMIT_FILE_SIZE') {
@@ -1280,15 +1484,12 @@ async function startServer() {
     console.log('📡 Military SecureComm Database Online');
     console.log("📊 Database: securecomm_db");
 
-    app.listen(PORT, () => {
-      console.log('\n🚀 ===== MILITARY SECURECOMM SERVER =====');
-      console.log(`📍 URL: http://localhost:${PORT}`);
-      console.log(`🔐 System Status: SECURE & OPERATIONAL`);
-      console.log('=====================================\n');
-
-      console.log('💡 Using browser-based face recognition with TensorFlow.js');
-      console.log(`📝 Registration endpoint: http://localhost:${PORT}/api/register`);
-    });
+    server.listen(PORT, () => {
+  console.log('\n🚀 ===== MILITARY SECURECOMM SERVER =====');
+  console.log(`🌐 URL: http://localhost:${PORT}`);
+  console.log(`🔌 WebSocket: ACTIVE`);
+  console.log('=====================================\n');
+});
 
   } catch (error) {
     console.error('❌ Failed to start server:', error);
