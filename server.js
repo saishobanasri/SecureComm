@@ -554,6 +554,26 @@ app.post('/api/questions', async (req, res) => {
     const { question_text } = req.body;
     const ip_address = getClientIP(req);
 
+    const QUESTION_LIMIT = 3;
+    const ONE_HOUR_AGO = new Date(Date.now() - 60 * 60 * 1000); // 1 hour in milliseconds
+
+    // 1. Count recent questions from this IP
+    const recentQuestionsCount = await Question.countDocuments({
+      ip_address: ip_address,
+      post_time: { $gte: ONE_HOUR_AGO } // Find questions posted in the last hour
+    });
+
+    // 2. Check if the limit is exceeded
+    if (recentQuestionsCount >= QUESTION_LIMIT) {
+      console.warn(`RATE LIMIT: IP ${ip_address} blocked. Found ${recentQuestionsCount} posts in the last hour.`);
+      
+      // 429 "Too Many Requests" is the correct HTTP status code
+      return res.status(429).json({ 
+        success: false, 
+        error: 'You have posted too many questions recently. Please try again after 1 hour.' 
+      });
+    }
+
     if (!question_text || question_text.trim().length === 0) {
       return res.status(400).json({ success: false, error: 'Question text is required' });
     }

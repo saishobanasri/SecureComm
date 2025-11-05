@@ -980,14 +980,22 @@ async function submitQuestion() {
             body: JSON.stringify({ question_text: questionText })
         });
 
+        // Always parse the JSON response, even for errors
         const data = await response.json();
 
-        if (data.success) {
+        if (response.ok) {
+            // Success (e.g., status 200)
             alert('🎖️ Question posted successfully!');
             closeQuestionPopup();
+        } else {
+            // Error (e.g., status 429, 400, 500)
+            // This will show the specific error message from the server
+            alert(`❌ Error: ${data.error || 'An unknown error occurred.'}`);
         }
+
     } catch (error) {
-        alert('❌ Failed to post question');
+        // This catches network errors (e.g., server is down)
+        alert('❌ Failed to post question. Could not connect to the server.');
     }
 }
 
