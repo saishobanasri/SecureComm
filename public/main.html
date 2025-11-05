@@ -1180,6 +1180,7 @@ let allQuestions = [];
     document.addEventListener('DOMContentLoaded', function() {
     loadUserProfile();
     loadApprovalCount();
+    loadTotalUnreadCount(); // --- ADD THIS LINE ---
     loadAllQuestions(); // NEW: Load questions from database
     
     const questionsScroll = document.querySelector('.questions-scroll');
@@ -1426,6 +1427,34 @@ if (searchInput) {
             updateApprovalCount();
         } catch (error) {
             console.error("Error loading approval count:", error);
+        }
+    }
+
+    // --- NEW FUNCTION: Load total unread chat messages ---
+    async function loadTotalUnreadCount() {
+        try {
+            const session = getStoredSession();
+            if (!session || !session.military_id) return;
+
+            const response = await fetch(`/api/chat/unread-count/${session.military_id}`);
+            if (!response.ok) throw new Error('Failed to fetch unread count');
+            
+            const data = await response.json();
+            const chatCardText = document.querySelector('.status-card[onclick*="chat.html"] .status-info p');
+
+            if (data.success) {
+                if (data.totalUnread > 0) {
+                    chatCardText.textContent = `${data.totalUnread} unseen message${data.totalUnread > 1 ? 's' : ''}`;
+                } else {
+                    chatCardText.textContent = `No unseen messages`;
+                }
+            } else {
+                chatCardText.textContent = `Error loading messages`;
+            }
+        } catch (error) {
+            console.error("Error loading total unread count:", error);
+            const chatCardText = document.querySelector('.status-card[onclick*="chat.html"] .status-info p');
+            if (chatCardText) chatCardText.textContent = `Error loading messages`;
         }
     }
 

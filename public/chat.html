@@ -307,6 +307,63 @@
         .btn-send:hover { box-shadow: 0 5px 15px rgba(74, 222, 128, 0.4); }
         .btn-cancel:hover { background: rgba(239, 68, 68, 0.1); box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4); }
         
+        /* --- NEW STYLES FOR IMAGE CHAT --- */
+        .attach-btn {
+            padding: 12px 15px;
+            background: transparent;
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            border-radius: 10px;
+            color: #4ade80;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 18px; /* Larger icon */
+            line-height: 1;
+            transition: all 0.3s ease;
+        }
+        .attach-btn:hover {
+            background: rgba(74, 222, 128, 0.1);
+        }
+
+        .image-preview {
+            position: relative;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            width: 150px;
+        }
+        .image-preview img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .remove-image-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 24px;
+            text-align: center;
+        }
+        .message img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        .chat-input-container { 
+            align-items: flex-end; /* Align buttons to bottom */
+        }
+        /* --- END NEW STYLES --- */
     </style>
 </head>
 <body>
@@ -339,7 +396,17 @@
                         <button class="delete-chat-btn" id="deleteChatBtn" title="Hide this conversation">Hide</button> </div>
                     <div class="chat-messages" style="display: none;"></div>
                     <div class="chat-input-section" style="display: none;">
+                        
+                        <div class="image-preview" id="imagePreviewContainer" style="display: none;">
+                            <img id="imagePreview" src="" alt="Image Preview">
+                            <button class="remove-image-btn" id="removeImageBtn">&times;</button>
+                        </div>
+                        
                         <div class="chat-input-container">
+                            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/gif" style="display: none;">
+                            
+                            <button class="attach-btn" id="attachBtn" title="Attach Image">📎</button>
+                            
                             <textarea class="chat-input" placeholder="Type your message..."></textarea>
                             <button class="send-btn">Send</button>
                         </div>
@@ -392,6 +459,7 @@
     let myUnitId = null;
     let allProfilesCache = []; // Caches all profiles for sorting
     let currentRecipientModal = null;
+    let selectedImageBase64 = null; // --- NEW: Store selected image
 
     // --- DOM ELEMENTS ---
     const chatList = document.querySelector('.chat-items');
@@ -408,6 +476,13 @@
     const recipientModalTitle = document.getElementById('recipientModalTitle');
     const recipientModalList = document.getElementById('recipientModalList');
     const recipientDoneBtn = document.getElementById('recipientDoneBtn');
+    
+    // --- NEW: Image Chat DOM Elements ---
+    const attachBtn = document.getElementById('attachBtn');
+    const imageInput = document.getElementById('imageInput');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeImageBtn = document.getElementById('removeImageBtn');
 
 
     // ======================================================
@@ -559,287 +634,119 @@
         return data.publicKey;
     }
 
-    let ws = null;
-let reconnectInterval = null;
-let isIntentionalDisconnect = false;
-
+    // ======================================================
+    // --- END: CRYPTO FUNCTIONS ---
+    // ======================================================
 /**
- * Connects to the WebSocket server
- */
-function connectWebSocket() {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log('WebSocket already connected');
-        return;
-    }
+     * Runs when the page is loaded.
+     */
+    document.addEventListener('DOMContentLoaded', async function() {
+        // --- HIERARCHY MODAL SCRIPT ---
+        setupModalListeners(); // We will call the new dynamic function
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
-    
-    console.log('🔌 Connecting to WebSocket:', wsUrl);
-    
-    ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-        console.log('✅ WebSocket connected');
+        // --- CHAT SCRIPT ---
         
-        // Authenticate with the server
-        ws.send(JSON.stringify({
-            type: 'auth',
-            militaryId: loggedInMilitaryId
-        }));
+        // --- FIX WAS HERE ---
+        loggedInMilitaryId = localStorage.getItem('militaryId'); 
+        // --- END FIX ---
 
-        // Clear any reconnection attempts
-        if (reconnectInterval) {
-            clearInterval(reconnectInterval);
-            reconnectInterval = null;
+        if (!loggedInMilitaryId) {
+            chatPlaceholder.innerHTML = '<p>Error: Not logged in. Please <a href="/login">log in</a>.</p>';
+            return;
         }
+        console.log(`Logged in as: ${loggedInMilitaryId}`);
 
-        // Update UI to show connection status
-        updateConnectionStatus(true);
-    };
-
-    ws.onmessage = (event) => {
+        // --- RE-GENERATE PRIVATE KEY ---
         try {
-            const data = JSON.parse(event.data);
-            handleWebSocketMessage(data);
+            const sessionStr = sessionStorage.getItem('activeSession');
+            if (!sessionStr) throw new Error('Active session not found. Please log in again.');
+            
+            const session = JSON.parse(sessionStr);
+            const myPassword = session.password;
+            const mySalt = session.profile.salt;
+            
+            // --- This code was correct in your file ---
+            myUnitId = session.profile.unitId; // Get our own unit ID
+            if (!myUnitId) throw new Error('Unit ID not found in session.');
+            // --- END ---
+
+            if (!myPassword || !mySalt) {
+                throw new Error('Session is missing password or salt. Please log in again.');
+            }
+
+            console.log('🔑 Re-generating private key from password and salt...');
+            const { privateKey } = generateKeys(myPassword, mySalt);
+            myPrivateKey = privateKey; // Store it in our global variable
+            console.log('✅ Private key re-generated successfully.');
+
         } catch (error) {
-            console.error('❌ Error parsing WebSocket message:', error);
+            console.error('CRITICAL: Could not generate private key.', error);
+            chatPlaceholder.innerHTML = `<p style="color: #ef4444;"><b>Fatal Error:</b> Could not initialize security keys. ${error.message}</p>`;
+            return; // Stop if keys fail
         }
-    };
+        // --- END KEY GENERATION ---
 
-    ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
-        updateConnectionStatus(false);
-    };
-
-    ws.onclose = () => {
-        console.log('🔌 WebSocket disconnected');
-        updateConnectionStatus(false);
         
-        // Attempt to reconnect unless it was intentional
-        if (!isIntentionalDisconnect) {
-            attemptReconnect();
-        }
-    };
-}
-
-/**
- * Handles incoming WebSocket messages
- */
-async function handleWebSocketMessage(data) {
-    console.log('📨 Received WebSocket message:', data.type);
-
-    switch (data.type) {
-        case 'auth_success':
-            console.log('✅ WebSocket authentication successful');
-            break;
-
-        case 'new_message':
-            await handleNewMessageNotification(data.message);
-            break;
-
-        case 'typing':
-            handleTypingIndicator(data);
-            break;
-
-        default:
-            console.log('Unknown message type:', data.type);
-    }
-}
-
-/**
- * Handles real-time message notifications
- */
-async function handleNewMessageNotification(message) {
-    console.log('📬 New message received via WebSocket');
-
-    // Reload chat list to show new conversation/update preview
-    await loadChatList();
-
-    // If the chat is currently open with this person, decrypt and display
-    const isFromCurrentChat = 
-        (message.senderId === currentOpenChatState.id && message.receiverId === loggedInMilitaryId) ||
-        (message.receiverId === currentOpenChatState.id && message.senderId === loggedInMilitaryId);
-
-    if (isFromCurrentChat && message.isAnonymous === currentOpenChatState.anonymous) {
-        const isSent = message.senderId === loggedInMilitaryId;
-        const msgTime = new Date(message.createdAt).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+        // Load the chat list AFTER keys are ready
+        await loadChatList();
+        
+        // --- This code was correct in your file ---
+        await loadAllProfiles(); // Fetch all profiles for recipient lists
+        // --- END ---
+        
+        // --- EVENT LISTENERS (ALL GO HERE) ---
+        searchInput.addEventListener('input', handleSearch);
+        deleteChatBtn.addEventListener('click', hideCurrentChat); // For hiding the whole chat
+        sendButton.addEventListener('click', sendMessage);
+        
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         });
         
-        let messageText = "";
-        
-        try {
-            if (isSent) {
-                // This shouldn't happen (we already added it), but just in case
-                messageText = message.senderCopy ? 
-                    decryptMessage(message.senderCopy, myPrivateKey) : 
-                    "[Sent by You]";
-            } else {
-                // Decrypt the received message
-                messageText = decryptMessage(message.messageText, myPrivateKey);
-            }
-        } catch (e) {
-            console.error('Decryption failed:', e);
-            messageText = "[DECRYPTION FAILED]";
-        }
-        
-        // Add message to UI
-        appendMessage(messageText, isSent, msgTime, message._id, isSent);
-    } else {
-        // Show a notification or badge (optional)
-        console.log('💬 New message in another conversation');
-    }
-}
+        // Listeners for the new delete modal
+        document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
+        document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
 
-/**
- * Handles typing indicators (optional feature)
- */
-function handleTypingIndicator(data) {
-    if (data.senderId === currentOpenChatState.id) {
-        const statusElement = document.getElementById('chat-status');
-        if (data.isTyping) {
-            statusElement.textContent = 'typing...';
-            statusElement.style.color = '#4ade80';
-        } else {
-            statusElement.textContent = currentOpenChatState.anonymous ? 
-                'Anonymous Session' : 'Military ID';
-            statusElement.style.color = '#94a3b8';
-        }
-    }
-}
-
-/**
- * Sends typing indicator to recipient (optional)
- */
-function sendTypingIndicator(isTyping) {
-    if (ws && ws.readyState === WebSocket.OPEN && currentOpenChatState.id) {
-        ws.send(JSON.stringify({
-            type: 'typing',
-            recipientId: currentOpenChatState.id,
-            isTyping: isTyping
-        }));
-    }
-}
-
-/**
- * Attempts to reconnect to WebSocket
- */
-function attemptReconnect() {
-    if (reconnectInterval) return;
-    
-    console.log('🔄 Attempting to reconnect WebSocket...');
-    
-    reconnectInterval = setInterval(() => {
-        if (!ws || ws.readyState === WebSocket.CLOSED) {
-            connectWebSocket();
-        }
-    }, 5000); // Try every 5 seconds
-}
-
-/**
- * Updates UI to show connection status
- */
-function updateConnectionStatus(isConnected) {
-    // You can add a status indicator in your header
-    // For now, just log it
-    console.log(isConnected ? '🟢 Connected' : '🔴 Disconnected');
-    
-    // Optional: Add a visual indicator
-    // const indicator = document.getElementById('connection-indicator');
-    // if (indicator) {
-    //     indicator.className = isConnected ? 'connected' : 'disconnected';
-    // }
-}
-
-/**
- * Disconnects WebSocket (call on logout)
- */
-function disconnectWebSocket() {
-    isIntentionalDisconnect = true;
-    if (ws) {
-        ws.close();
-        ws = null;
-    }
-    if (reconnectInterval) {
-        clearInterval(reconnectInterval);
-        reconnectInterval = null;
-    }
-}
-    document.addEventListener('DOMContentLoaded', async function() {
-    setupModalListeners();
-    
-    loggedInMilitaryId = localStorage.getItem('militaryId'); 
-
-    if (!loggedInMilitaryId) {
-        chatPlaceholder.innerHTML = '<p>Error: Not logged in. Please <a href="/login">log in</a>.</p>';
-        return;
-    }
-    console.log(`Logged in as: ${loggedInMilitaryId}`);
-
-    // Initialize crypto keys (your existing code)
-    try {
-        const sessionStr = sessionStorage.getItem('activeSession');
-        if (!sessionStr) throw new Error('Active session not found. Please log in again.');
-        
-        const session = JSON.parse(sessionStr);
-        const myPassword = session.password;
-        const mySalt = session.profile.salt;
-        myUnitId = session.profile.unitId;
-        if (!myUnitId) throw new Error('Unit ID not found in session.');
-
-        if (!myPassword || !mySalt) {
-            throw new Error('Session is missing password or salt. Please log in again.');
-        }
-
-        console.log('🔐 Re-generating private key from password and salt...');
-        const { privateKey } = generateKeys(myPassword, mySalt);
-        myPrivateKey = privateKey;
-        console.log('✅ Private key re-generated successfully.');
-
-    } catch (error) {
-        console.error('CRITICAL: Could not generate private key.', error);
-        chatPlaceholder.innerHTML = `<p style="color: #ef4444;"><b>Fatal Error:</b> Could not initialize security keys. ${error.message}</p>`;
-        return;
-    }
-
-    // 🆕 NEW: Connect to WebSocket
-    connectWebSocket();
-    
-    await loadChatList();
-    await loadAllProfiles();
-    
-    // Event listeners (your existing code)
-    searchInput.addEventListener('input', handleSearch);
-    deleteChatBtn.addEventListener('click', hideCurrentChat);
-    sendButton.addEventListener('click', sendMessage);
-    
-    chatInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    // 🆕 NEW: Add typing indicator (optional)
-    let typingTimeout;
-    chatInput.addEventListener('input', function() {
-        sendTypingIndicator(true);
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            sendTypingIndicator(false);
-        }, 1000);
+        // --- NEW: Event Listeners for Image Upload ---
+        attachBtn.addEventListener('click', () => imageInput.click());
+        imageInput.addEventListener('change', handleImageSelection);
+        removeImageBtn.addEventListener('click', clearImagePreview);
     });
     
-    document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
-    document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
+    // --- NEW: Function to handle image selection ---
+    function handleImageSelection(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
-    // 🆕 NEW: Disconnect WebSocket on page unload
-    window.addEventListener('beforeunload', () => {
-        disconnectWebSocket();
-    });
-});
+        // Check file size (e.g., 5MB limit to match server's 10MB JSON limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File is too large. Maximum size is 5MB.');
+            imageInput.value = ''; // Clear input
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            selectedImageBase64 = e.target.result;
+            imagePreview.src = selectedImageBase64;
+            imagePreviewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+        
+        // Clear the input value so the same file can be re-selected
+        imageInput.value = '';
+    }
+
+    // --- NEW: Function to clear image preview ---
+    function clearImagePreview() {
+        selectedImageBase64 = null;
+        imagePreview.src = '';
+        imagePreviewContainer.style.display = 'none';
+        imageInput.value = ''; // Clear file input
+    }
     
     /**
      * Fetches the list of conversations from the API.
@@ -997,28 +904,41 @@ async function openChat(contactId, contactName, contactAvatar, isAnonymous) { //
             const isSent = msg.senderId === loggedInMilitaryId;
             const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
-            let messageText = "";
+            // --- MODIFIED: Decryption logic to handle JSON payloads ---
+            let decryptedPayloadString = "";
             let allowDelete = false;
+            let payload; // This will hold the final object or string
 
             try {
                 if (isSent) {
                     // We sent this. Decrypt our own copy.
                     if (!msg.senderCopy) {
-                        messageText = "[Encrypted - Sent by You (Old)]";
+                        decryptedPayloadString = "[Encrypted - Sent by You (Old)]";
                     } else {
-                        messageText = decryptMessage(msg.senderCopy, myPrivateKey);
+                        decryptedPayloadString = decryptMessage(msg.senderCopy, myPrivateKey);
                     }
                     allowDelete = true; 
                 } else {
                     // We received this. Decrypt the main text.
-                    messageText = decryptMessage(msg.messageText, myPrivateKey);
+                    decryptedPayloadString = decryptMessage(msg.messageText, myPrivateKey);
                 }
+                
+                // --- NEW: Try to parse the decrypted string as JSON ---
+                try {
+                    payload = JSON.parse(decryptedPayloadString);
+                } catch (e) {
+                    // If parsing fails, it's an old-style text-only message
+                    payload = decryptedPayloadString;
+                }
+                
             } catch (e) {
                 console.error('Decryption failed for message:', msg._id, e);
-                messageText = "[DECRYPTION FAILED]";
+                payload = "[DECRYPTION FAILED]";
             }
             
-            appendMessage(messageText, isSent, msgTime, msg._id, allowDelete);
+            // Pass the parsed payload (object or string) to appendMessage
+            appendMessage(payload, isSent, msgTime, msg._id, allowDelete);
+            // --- END MODIFICATION ---
         }
         
         loadChatList(); // Update sidebar to potentially mark as read
@@ -1030,94 +950,141 @@ async function openChat(contactId, contactName, contactAvatar, isAnonymous) { //
 }
 
         /**
-         * Appends a single message bubble to the chat window. (REPLACE)
+         * Appends a single message bubble to the chat window. (MODIFIED)
+         * Now accepts a payload (string for old messages, object for new)
          */
-        function appendMessage(text, isSent, time, messageId, allowDelete = false) {
+        function appendMessage(payload, isSent, time, messageId, allowDelete = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
             messageDiv.dataset.messageId = messageId;
+            
+            // --- NEW: Handle payload object or string ---
+            let textContent = '';
+            let imageContent = '';
 
-            const safeText = document.createTextNode(text).textContent;
+            if (typeof payload === 'string') {
+                // Old message (just text)
+                textContent = payload;
+            } else if (typeof payload === 'object' && payload !== null) {
+                // New message (payload object)
+                textContent = payload.text || '';
+                imageContent = payload.image || null;
+            }
+            // --- END NEW ---
+
+            const safeText = document.createTextNode(textContent).textContent;
             
             let deleteBtnHtml = '';
-            
-            // Allow deleting our own sent messages OR any received message (for-me)
             if (messageId && (allowDelete || !isSent)) {
-                 // Use a trash can icon and call the new modal function
                 deleteBtnHtml = `<span class="delete-msg-btn" onclick="openDeleteModal(this, '${messageId}', ${isSent})" title="Delete message">&times;</span>`;
             }
+            
+            // --- NEW: Build HTML for image and/or text ---
+            let messageHtml = '';
+            if (imageContent) {
+                // Add click-to-open-in-new-tab functionality
+                messageHtml += `<img src="${imageContent}" alt="Encrypted Image" onclick="window.open('${imageContent}', '_blank')" style="max-width: 100%; border-radius: 10px; margin-bottom: 5px; cursor: pointer;">`;
+            }
+            if (safeText) {
+                messageHtml += `<p style="margin:0; white-space: pre-wrap;">${safeText}</p>`; // pre-wrap to respect newlines
+            }
+            // --- END NEW ---
 
-            messageDiv.innerHTML = `${safeText}<span class="message-time">${time}</span>${deleteBtnHtml}`;
+            messageDiv.innerHTML = `${messageHtml}<span class="message-time">${time}</span>${deleteBtnHtml}`;
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
     /**
-         * Sends a new message via the API. (UPDATED for E2EE)
+         * Sends a new message via the API. (MODIFIED for E2EE + Images)
          */
         async function sendMessage() {
-    const text = chatInput.value.trim();
-    if (text === '' || !currentOpenChatState.id) return;
+            const text = chatInput.value.trim();
+            
+            // --- MODIFIED: Check for text OR image ---
+            if (text === '' && !selectedImageBase64) return;
+            if (!currentOpenChatState.id) return;
 
-    let encryptedTextForReceiver;
-    let encryptedTextForSelf;
-    
-    try {
-        console.log(`Fetching public key for receiver ${currentOpenChatState.id}...`);
-        const receiverKey = await fetchKey(currentOpenChatState.id);
-        console.log('Encrypting message for receiver...');
-        encryptedTextForReceiver = encryptMessage(text, receiverKey);
-        
-        console.log(`Fetching public key for self ${loggedInMilitaryId}...`);
-        const selfKey = await fetchKey(loggedInMilitaryId);
-        console.log('Encrypting message for self...');
-        encryptedTextForSelf = encryptMessage(text, selfKey);
+            // --- NEW: Create JSON payload ---
+            const payload = {
+                text: text,
+                image: selectedImageBase64 // This is null if no image is selected
+            };
+            const plainPayloadString = JSON.stringify(payload);
+            const sentPayload = payload; // Store plain payload for optimistic update
+            // --- END NEW ---
 
-    } catch (error) {
-        console.error('Encryption failed:', error);
-        alert('Error: Could not get encryption keys. Cannot send message.');
-        return;
-    }
+            // --- START ENCRYPTION ---
+            let encryptedTextForReceiver;
+            let encryptedTextForSelf; // For our own history
+            
+            try {
+                console.log(`Fetching public key for receiver ${currentOpenChatState.id}...`);
+                const receiverKey = await fetchKey(currentOpenChatState.id);
+                
+                console.log('Encrypting payload for receiver...');
+                // --- MODIFIED: Encrypt the JSON string ---
+                encryptedTextForReceiver = encryptMessage(plainPayloadString, receiverKey);
+                
+                console.log(`Fetching public key for self ${loggedInMilitaryId}...`);
+                const selfKey = await fetchKey(loggedInMilitaryId); // Will be cached
+                
+                console.log('Encrypting payload for self...');
+                // --- MODIFIED: Encrypt the JSON string ---
+                encryptedTextForSelf = encryptMessage(plainPayloadString, selfKey);
 
-    const sentText = chatInput.value;
-    chatInput.value = ''; 
+            } catch (error) {
+                console.error('Encryption failed:', error);
+                alert('Error: Could not get encryption keys. Cannot send message.');
+                return;
+            }
+            // --- END ENCRYPTION ---
 
-    try {
-        const messageData = {
-            senderId: loggedInMilitaryId,
-            receiverId: currentOpenChatState.id,
-            messageText: encryptedTextForReceiver,
-            senderCopy: encryptedTextForSelf,
-            isAnonymous: currentOpenChatState.anonymous
-        };
-        
-        const response = await fetch('/api/chat/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(messageData)
-        });
-        
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error);
-        
-        const msg = data.message;
-        const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-        
-        // Add to UI immediately (sender's view)
-        appendMessage(sentText, true, msgTime, msg._id, true);
-        
-        // The receiver will get it via WebSocket automatically
-        await loadChatList();
+            // --- MODIFIED: Clear both text and image preview ---
+            chatInput.value = ''; 
+            clearImagePreview();
+            // --- END MODIFICATION ---
 
-    } catch (error) {
-        console.error('Error sending message:', error);
-        chatInput.value = sentText;
-        alert('Failed to send message: ' + error.message);
-    }
-}
+            try {
+                // --- SEND MESSAGE (with both copies) ---
+                const messageData = {
+                    senderId: loggedInMilitaryId,
+                    receiverId: currentOpenChatState.id,
+                    messageText: encryptedTextForReceiver, // For receiver
+                    senderCopy: encryptedTextForSelf,      // For self
+                    isAnonymous: currentOpenChatState.anonymous
+                };
+                
+                const response = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(messageData)
+                });
+                
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error);
+                
+                const msg = data.message;
+                const msgTime = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // --- MODIFIED: Append the PLAIN payload object ---
+                appendMessage(sentPayload, true, msgTime, msg._id, true); 
+
+                await loadChatList(); // Update sidebar
+
+            } catch (error) {
+                console.error('Error sending message:', error);
+                // --- MODIFIED: Restore inputs on failure ---
+                chatInput.value = sentPayload.text;
+                if (sentPayload.image) {
+                    selectedImageBase64 = sentPayload.image;
+                    imagePreview.src = selectedImageBase64;
+                    imagePreviewContainer.style.display = 'block';
+                }
+                // --- END MODIFICATION ---
+                alert('Failed to send message: ' + error.message);
+            }
+        }
 
     /**
      * Hides the currently open conversation.
@@ -1429,90 +1396,99 @@ async function openChat(contactId, contactName, contactAvatar, isAnonymous) { //
     /**
      * Submits the message from the hierarchy modal.
      * Now sends 1-to-1 encrypted chats if "Not Anonymous" is checked.
+     * (NOTE: This does not support images yet, only the main chat does)
      */
     async function submitQuestion() {
-    const messageText = document.getElementById('messageText').value.trim();
-    const isAnonymous = document.querySelector('input[name="anonymity"]:checked').value === 'anonymous';
+        const messageText = document.getElementById('messageText').value.trim();
+        const isAnonymous = document.querySelector('input[name="anonymity"]:checked').value === 'anonymous';
 
-    if (messageText === '') {
-        alert('Please enter a message before sending.');
-        return;
-    }
-
-    const isInterChecked = document.getElementById('interUnitCheckbox').checked;
-    const isIntraChecked = document.getElementById('intraUnitCheckbox').checked;
-    
-    if (!isInterChecked && !isIntraChecked) {
-        alert('Please select who the message is visible to (Inter-Unit or Intra-Unit).');
-        return;
-    }
-
-    if (selectedRecipients.length === 0) {
-        alert('Please select at least one recipient using the "Visible To" checkboxes.');
-        return;
-    }
-
-    console.log(`📤 Sending ${isAnonymous ? 'ANONYMOUS' : 'non-anonymous'} message to ${selectedRecipients.length} recipients...`);
-    
-    let successCount = 0;
-    let failCount = 0;
-    
-    const sendBtn = postQuestionModal.querySelector('.btn-send');
-    sendBtn.disabled = true;
-    sendBtn.textContent = 'SENDING...';
-
-    // Send one encrypted message to each recipient
-    for (const recipientId of selectedRecipients) {
-        try {
-            console.log(`   → Sending to ${recipientId}...`);
-            
-            // Get recipient's public key
-            const receiverKey = await fetchKey(recipientId);
-            
-            // Get our own public key (for self-copy)
-            const selfKey = await fetchKey(loggedInMilitaryId);
-            
-            // Encrypt for receiver
-            const encryptedTextForReceiver = encryptMessage(messageText, receiverKey);
-            
-            // Encrypt for self
-            const encryptedTextForSelf = encryptMessage(messageText, selfKey);
-
-            // Send to server
-            const messageData = {
-                senderId: loggedInMilitaryId,
-                receiverId: recipientId,
-                messageText: encryptedTextForReceiver,
-                senderCopy: encryptedTextForSelf,
-                isAnonymous: isAnonymous // ← Verify this line exists
-            };
-
-            const response = await fetch('/api/chat/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(messageData)
-            });
-
-            const data = await response.json();
-            if (!data.success) throw new Error(`Server error for ${recipientId}`);
-            
-            successCount++;
-            console.log(`   ✅ Sent to ${recipientId}`);
-
-        } catch (error) {
-            console.error(`   ❌ Failed to send to ${recipientId}:`, error);
-            failCount++;
+        if (messageText === '') {
+            alert('Please enter a message before sending.');
+            return;
         }
+
+        const isInterChecked = document.getElementById('interUnitCheckbox').checked;
+        const isIntraChecked = document.getElementById('intraUnitCheckbox').checked;
+        
+        if (!isInterChecked && !isIntraChecked) {
+            alert('Please select who the message is visible to (Inter-Unit or Intra-Unit).');
+            return;
+        }
+
+        if (selectedRecipients.length === 0) {
+            alert('Please select at least one recipient using the "Visible To" checkboxes.');
+            return;
+        }
+
+        console.log(`📤 Sending ${isAnonymous ? 'ANONYMOUS' : 'non-anonymous'} message to ${selectedRecipients.length} recipients...`);
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        const sendBtn = postQuestionModal.querySelector('.btn-send');
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'SENDING...';
+
+        // --- NEW: Create a simple text-only payload for this modal ---
+        const payload = {
+            text: messageText,
+            image: null // This modal doesn't support images
+        };
+        const plainPayloadString = JSON.stringify(payload);
+        // --- END NEW ---
+
+        // Send one encrypted message to each recipient
+        for (const recipientId of selectedRecipients) {
+            try {
+                console.log(`   → Sending to ${recipientId}...`);
+                
+                // Get recipient's public key
+                const receiverKey = await fetchKey(recipientId);
+                
+                // Get our own public key (for self-copy)
+                const selfKey = await fetchKey(loggedInMilitaryId);
+                
+                // Encrypt for receiver
+                const encryptedTextForReceiver = encryptMessage(plainPayloadString, receiverKey);
+                
+                // Encrypt for self
+                const encryptedTextForSelf = encryptMessage(plainPayloadString, selfKey);
+
+                // Send to server
+                const messageData = {
+                    senderId: loggedInMilitaryId,
+                    receiverId: recipientId,
+                    messageText: encryptedTextForReceiver,
+                    senderCopy: encryptedTextForSelf,
+                    isAnonymous: isAnonymous // ← Verify this line exists
+                };
+
+                const response = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(messageData)
+                });
+
+                const data = await response.json();
+                if (!data.success) throw new Error(`Server error for ${recipientId}`);
+                
+                successCount++;
+                console.log(`   ✅ Sent to ${recipientId}`);
+
+            } catch (error) {
+                console.error(`   ❌ Failed to send to ${recipientId}:`, error);
+                failCount++;
+            }
+        }
+
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'SEND';
+        
+        alert(`Message sending complete.\n\nSuccessfully sent: ${successCount}\nFailed to send: ${failCount}`);
+
+        await loadChatList();
+        resetAndClosePostModal();
     }
-
-    sendBtn.disabled = false;
-    sendBtn.textContent = 'SEND';
-    
-    alert(`Message sending complete.\n\nSuccessfully sent: ${successCount}\nFailed to send: ${failCount}`);
-
-    await loadChatList();
-    resetAndClosePostModal();
-}
 </script>
 </body>
 </html>

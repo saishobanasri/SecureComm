@@ -281,7 +281,6 @@
             padding: 10px;
         }
 
-        /* Service ID specific styling */
         #serviceId {
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -290,59 +289,84 @@
         #serviceId::placeholder {
             text-transform: none;
         }
-
-        /* Photo Upload */
-        .photo-upload {
-            position: relative;
+        
+        /* --- STYLES for Photo Capture --- */
+        .photo-capture-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.3);
             border: 2px dashed rgba(74, 222, 128, 0.5);
             border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.4s ease;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
         }
-
-        .photo-upload:hover {
-            border-color: #4ade80;
-            background: rgba(74, 222, 128, 0.1);
-            transform: translateY(-2px);
+        
+        .camera-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #4ade80;
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.4);
+            background: rgba(0, 0, 0, 0.5);
         }
-
-        .photo-upload input[type="file"] {
-            position: absolute;
-            opacity: 0;
+        
+        #video, #photoPreview {
             width: 100%;
             height: 100%;
-            cursor: pointer;
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            color: #4ade80;
-            margin-bottom: 15px;
-        }
-
-        .upload-text {
-            color: #94a3b8;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-
-        .upload-hint {
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        .photo-preview {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
             object-fit: cover;
-            border: 3px solid #4ade80;
-            margin: 0 auto 15px;
             display: none;
         }
+
+        .camera-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #4ade80;
+        }
+        
+        .camera-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .photo-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .photo-btn {
+            padding: 10px 20px;
+            border: 2px solid #4ade80;
+            background: transparent;
+            color: #4ade80;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        .photo-btn:hover {
+            background: rgba(74, 222, 128, 0.15);
+            transform: translateY(-2px);
+        }
+        .photo-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #profilePhotoInput {
+            display: none;
+        }
+        /* --- END PHOTO STYLES --- */
+
 
         /* Submit Button */
         .submit-btn {
@@ -577,40 +601,38 @@
         }
 
         .modal-content {
-    background: rgba(0, 0, 0, 0.95);
-    margin: 5% auto;
-    padding: 40px;
-    border: 2px solid #4ade80;
-    border-radius: 20px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 85vh; /* Add max height */
-    overflow-y: auto; /* Add scrolling */
-    position: relative;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
-}
+            background: rgba(0, 0, 0, 0.95);
+            margin: 5% auto;
+            padding: 40px;
+            border: 2px solid #4ade80;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh; /* Add max height */
+            overflow-y: auto; /* Add scrolling */
+            position: relative;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+        }
 
-.confirmation-details {
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(74, 222, 128, 0.3);
-    border-radius: 15px;
-    padding: 25px;
-    margin-bottom: 30px;
-    max-height: 50vh; /* Add max height for details */
-    overflow-y: auto; /* Add scrolling for details */
-}
+        .confirmation-details {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            max-height: 50vh; /* Add max height for details */
+            overflow-y: auto; /* Add scrolling for details */
+        }
 
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
         <div class="logo" onclick="window.location.href='index.html'">SecureComm</div>
         <a href="index.html" class="back-btn">← Back to Home</a>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content">
         <div class="register-container">
             <h1 class="register-title">Personnel Registration</h1>
@@ -621,17 +643,14 @@
                     <label class="form-label">Full Name</label>
                     <input type="text" class="form-input" id="fullName" required placeholder="Enter your full name">
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Date of Birth</label>
                     <input type="date" class="form-input" id="dateOfBirth" required>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Contact Number</label>
                     <input type="tel" class="form-input" id="contactNumber" required placeholder="+91 1234567890">
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Email Address</label>
                     <input type="email" class="form-input" id="email" required placeholder="soldier@military.gov">
@@ -641,7 +660,6 @@
                     <label class="form-label">Service ID</label>
                     <input type="text" class="form-input" id="serviceId" required placeholder="IC-12345" pattern="^IC-\d{5}$" maxlength="8">
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Unit</label>
                     <select class="form-select" id="unit" required>
@@ -658,21 +676,20 @@
                         <option value="UNIT010">Special Forces</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Role</label>
                     <select class="form-select" id="role" required>
                         <option value="">Select Role</option>
                         <option value="ROLE001">Commander</option>
-			<option value="ROLE002">General</option>
-			<option value="ROLE003">Colonel</option>
-			<option value="ROLE004">Major</option>
-			<option value="ROLE005">Captain</option>
-			<option value="ROLE006">Lieutenant</option>
-			<option value="ROLE007">Sergeant</option>
-			<option value="ROLE008">Corporal</option>
-			<option value="ROLE009">Private</option>
-			<option value="ROLE010">Cadet</option>
+                        <option value="ROLE002">General</option>
+                        <option value="ROLE003">Colonel</option>
+                        <option value="ROLE004">Major</option>
+                        <option value="ROLE005">Captain</option>
+                        <option value="ROLE006">Lieutenant</option>
+                        <option value="ROLE007">Sergeant</option>
+                        <option value="ROLE008">Corporal</option>
+                        <option value="ROLE009">Private</option>
+                        <option value="ROLE010">Cadet</option>
                     </select>
                 </div>
 
@@ -680,7 +697,6 @@
                     <label class="form-label">Password</label>
                     <input type="password" class="form-input" id="password" required placeholder="Enter secure password">
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Confirm Password</label>
                     <input type="password" class="form-input" id="confirmPassword" required placeholder="Confirm your password">
@@ -688,22 +704,29 @@
 
                 <div class="form-group full-width">
                     <label class="form-label">Profile Photo</label>
-                    <div class="photo-upload" onclick="document.getElementById('profilePhoto').click()">
-                        <input type="file" id="profilePhoto" accept="image/*">
-                        <img id="photoPreview" class="photo-preview" alt="Preview">
-                        <div class="upload-icon">📷</div>
-                        <div class="upload-text">Click to upload profile photo</div>
-                        <div class="upload-hint">Supported formats: JPG, PNG, GIF (Max: 5MB)</div>
+                    <div class="photo-capture-area">
+                        <div class="camera-container">
+                            <video id="video" autoplay muted></video>
+                            <img id="photoPreview" alt="Profile Preview">
+                            <div class="camera-placeholder" id="cameraPlaceholder">
+                                <div class="camera-icon">📷</div>
+                            </div>
+                        </div>
+                        <div class="photo-buttons">
+                            <button type="button" class="photo-btn" id="startCameraBtn">Start Camera</button>
+                            <button type="button" class="photo-btn" id="captureBtn" disabled>Capture Photo</button>
+                            <button type="button" class="photo-btn" id="uploadBtn">Upload File</button>
+                            <input type="file" id="profilePhotoInput" accept="image/*">
+                        </div>
                     </div>
                 </div>
 
                 <button type="submit" class="submit-btn">Register Personnel</button>
-                <div class="loading" id="loading">Processing registration...</div>
+                <div class="loading" id="loading">Processing...</div>
             </form>
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
     <div id="confirmationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -711,8 +734,7 @@
                 <p class="modal-subtitle">Please verify your information before submitting</p>
             </div>
             <div class="confirmation-details" id="confirmationDetails">
-                <!-- Details will be populated by JavaScript -->
-            </div>
+                </div>
             <div class="modal-buttons">
                 <button class="modal-btn confirm-btn" onclick="confirmRegistration()">Confirm & Submit</button>
                 <button class="modal-btn cancel-btn" onclick="closeModal('confirmationModal')">Cancel</button>
@@ -720,7 +742,6 @@
         </div>
     </div>
 
-    <!-- Success Modal -->
     <div id="successModal" class="modal success-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -740,194 +761,182 @@
 
     <script>
         let formData = {};
+        let stream = null;
 
-        // Service ID formatting and validation
+        // --- Camera and Photo Logic (No Validation) ---
+        document.getElementById('startCameraBtn').addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { width: 200, height: 200, facingMode: 'user' } });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                document.getElementById('photoPreview').style.display = 'none';
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+                document.getElementById('captureBtn').disabled = false;
+                document.getElementById('startCameraBtn').disabled = true;
+            } catch (err) {
+                alert('🚨 CAMERA ERROR\nUnable to access camera. Please check permissions or use "Upload File".');
+            }
+        });
+
+        document.getElementById('captureBtn').addEventListener('click', () => {
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            video.style.display = 'none';
+            document.getElementById('captureBtn').disabled = true;
+            document.getElementById('startCameraBtn').disabled = false;
+            
+            const imageDataUrl = canvas.toDataURL('image/jpeg');
+            processAndSetPhoto(imageDataUrl);
+        });
+        
+        document.getElementById('uploadBtn').addEventListener('click', () => {
+            document.getElementById('profilePhotoInput').click();
+        });
+
+        document.getElementById('profilePhotoInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    processAndSetPhoto(event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        async function processAndSetPhoto(imageDataUrl) {
+            const photoPreview = document.getElementById('photoPreview');
+            photoPreview.src = imageDataUrl;
+            photoPreview.style.display = 'block';
+            document.getElementById('cameraPlaceholder').style.display = 'none';
+
+            // Convert data URL to Blob for form submission
+            try {
+                const response = await fetch(imageDataUrl);
+                const blob = await response.blob();
+                formData.profilePhoto = new File([blob], "profile_photo.jpg", { type: "image/jpeg" });
+                console.log("Photo processed and ready for submission.");
+            } catch (error) {
+                console.error("Error processing image data:", error);
+                alert("Could not process the captured image. Please try again.");
+            }
+        }
+
+
+        // --- Form Validation and Submission Logic ---
         document.getElementById('serviceId').addEventListener('input', function(e) {
             let value = e.target.value.toUpperCase();
-            
-            // Remove any non-alphanumeric characters except dash
             value = value.replace(/[^A-Z0-9-]/g, '');
-            
-            // Ensure it starts with IC-
             if (!value.startsWith('IC-')) {
-                if (value.startsWith('IC')) {
-                    value = 'IC-' + value.substring(2);
-                } else {
-                    value = 'IC-' + value.replace(/^IC-?/, '');
-                }
+                value = 'IC-' + value.replace(/^IC-?/, '');
             }
-            
-            // Limit to IC- plus 5 digits
-            if (value.length > 8) {
-                value = value.substring(0, 8);
-            }
-            
-            // Ensure only numbers after IC-
+            if (value.length > 8) value = value.substring(0, 8);
             const parts = value.split('-');
             if (parts.length > 1) {
                 parts[1] = parts[1].replace(/[^0-9]/g, '');
                 value = parts[0] + '-' + parts[1];
             }
-            
             e.target.value = value;
-            
-            // Visual feedback for valid format
-            const isValid = /^IC-\d{5}$/.test(value);
-            if (value.length >= 3 && !isValid && value !== 'IC-') {
-                e.target.style.borderColor = '#ef4444';
-                e.target.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.3)';
-            } else if (isValid) {
-                e.target.style.borderColor = '#4ade80';
-                e.target.style.boxShadow = '0 0 20px rgba(74, 222, 128, 0.3)';
-            } else {
-                e.target.style.borderColor = 'rgba(74, 222, 128, 0.3)';
-                e.target.style.boxShadow = 'none';
-            }
         });
 
-        // Photo upload preview
-        document.getElementById('profilePhoto').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('photoPreview');
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    
-                    // Hide upload text and show preview
-                    const uploadElements = document.querySelectorAll('.upload-icon, .upload-text, .upload-hint');
-                    uploadElements.forEach(el => el.style.display = 'none');
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Form submission
         document.getElementById('registerForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Validate passwords match
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            
             if (password !== confirmPassword) {
-                alert('🚨 SECURITY ALERT\nPasswords do not match. Please verify and try again.');
+                alert('🚨 SECURITY ALERT\nPasswords do not match.');
                 return;
             }
 
-            // Validate Service ID format
             const serviceId = document.getElementById('serviceId').value;
             if (!/^IC-\d{5}$/.test(serviceId)) {
-                alert('🚨 VALIDATION ERROR\nService ID must be in format IC-##### (IC followed by 5 digits)');
-                document.getElementById('serviceId').focus();
+                alert('🚨 VALIDATION ERROR\nService ID must be in format IC-#####.');
+                return;
+            }
+            
+            if (!formData.profilePhoto) {
+                alert('🚨 VALIDATION ERROR\nPlease upload or capture a profile photo.');
                 return;
             }
 
-            // Collect form data
-            formData = {
-                fullName: document.getElementById('fullName').value,
-                dateOfBirth: document.getElementById('dateOfBirth').value,
-                contactNumber: document.getElementById('contactNumber').value,
-                email: document.getElementById('email').value,
-                serviceId: serviceId,
-                unit_id: document.getElementById('unit').value,
-                role_id: document.getElementById('role').value,
-                password: password,
-                profilePhoto: document.getElementById('profilePhoto').files[0]
-            };
+            // Collect other form data
+            formData.fullName = document.getElementById('fullName').value;
+            formData.dateOfBirth = document.getElementById('dateOfBirth').value;
+            formData.contactNumber = document.getElementById('contactNumber').value;
+            formData.email = document.getElementById('email').value;
+            formData.serviceId = serviceId;
+            formData.unit_id = document.getElementById('unit').value;
+            formData.role_id = document.getElementById('role').value;
+            formData.password = password;
 
-            // Show confirmation modal
             showConfirmationModal();
         });
 
         function showConfirmationModal() {
-    const detailsContainer = document.getElementById('confirmationDetails');
-    const photoText = formData.profilePhoto ? formData.profilePhoto.name : 'No photo selected';
-    
-    // Get the actual unit and role names from the select options
-    const unitSelect = document.getElementById('unit');
-    const roleSelect = document.getElementById('role');
-    const unitName = unitSelect.options[unitSelect.selectedIndex].text;
-    const roleName = roleSelect.options[roleSelect.selectedIndex].text;
-    
-    detailsContainer.innerHTML = `
-        <div class="detail-row">
-            <span class="detail-label">Name:</span>
-            <span class="detail-value">${formData.fullName}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Date of Birth:</span>
-            <span class="detail-value">${formData.dateOfBirth}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Contact:</span>
-            <span class="detail-value">${formData.contactNumber}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Email:</span>
-            <span class="detail-value">${formData.email}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Service ID:</span>
-            <span class="detail-value">${formData.serviceId}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Unit:</span>
-            <span class="detail-value">${unitName}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Role:</span>
-            <span class="detail-value">${roleName}</span>
-        </div>
-        <div class="detail-row">
-            <span class="detail-label">Profile Photo:</span>
-            <span class="detail-value">${photoText}</span>
-        </div>
-    `;
-    
-    document.getElementById('confirmationModal').style.display = 'block';
-}
+            const detailsContainer = document.getElementById('confirmationDetails');
+            const photoText = formData.profilePhoto ? formData.profilePhoto.name : 'No photo selected';
+            
+            const unitSelect = document.getElementById('unit');
+            const roleSelect = document.getElementById('role');
+            const unitName = unitSelect.options[unitSelect.selectedIndex].text;
+            const roleName = roleSelect.options[roleSelect.selectedIndex].text;
+            
+            detailsContainer.innerHTML = `
+                <div class="detail-row"><span class="detail-label">Name:</span><span class="detail-value">${formData.fullName}</span></div>
+                <div class="detail-row"><span class="detail-label">Date of Birth:</span><span class="detail-value">${formData.dateOfBirth}</span></div>
+                <div class="detail-row"><span class="detail-label">Contact:</span><span class="detail-value">${formData.contactNumber}</span></div>
+                <div class="detail-row"><span class="detail-label">Email:</span><span class="detail-value">${formData.email}</span></div>
+                <div class="detail-row"><span class="detail-label">Service ID:</span><span class="detail-value">${formData.serviceId}</span></div>
+                <div class="detail-row"><span class="detail-label">Unit:</span><span class="detail-value">${unitName}</span></div>
+                <div class="detail-row"><span class="detail-label">Role:</span><span class="detail-value">${roleName}</span></div>
+                <div class="detail-row"><span class="detail-label">Profile Photo:</span><span class="detail-value">${photoText}</span></div>
+            `;
+            
+            document.getElementById('confirmationModal').style.display = 'block';
+        }
 
         async function confirmRegistration() {
             closeModal('confirmationModal');
+            document.getElementById('loading').textContent = 'Processing registration...';
             document.getElementById('loading').style.display = 'block';
 
             try {
-                // Create FormData for file upload
                 const submitData = new FormData();
                 Object.keys(formData).forEach(key => {
-                    if (key !== 'profilePhoto') {
-                        submitData.append(key, formData[key]);
-                    }
+                    submitData.append(key, formData[key]);
                 });
-                
-                if (formData.profilePhoto) {
-                    submitData.append('profilePhoto', formData.profilePhoto);
-                }
 
-                // Submit to backend
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     body: submitData
                 });
 
                 const result = await response.json();
-                
                 document.getElementById('loading').style.display = 'none';
 
                 if (response.ok) {
                     document.getElementById('successModal').style.display = 'block';
                 } else {
-                    alert('🚨 REGISTRATION FAILED\n' + (result.message || 'An error occurred during registration.'));
+                    alert('🚨 REGISTRATION FAILED\n' + (result.message || 'An error occurred.'));
                 }
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
-                alert('🚨 NETWORK ERROR\nUnable to connect to secure servers. Please try again.');
+                alert('🚨 NETWORK ERROR\nUnable to connect to secure servers.');
                 console.error('Registration error:', error);
             }
         }
 
+        // --- Utility Functions ---
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
@@ -936,7 +945,6 @@
             window.location.href = 'index.html';
         }
 
-        // Close modal when clicking outside
         window.onclick = function(event) {
             const modals = document.querySelectorAll('.modal');
             modals.forEach(modal => {
@@ -945,57 +953,6 @@
                 }
             });
         }
-
-        // Enhanced form interactions
-        document.querySelectorAll('.form-input, .form-select').forEach(input => {
-            input.addEventListener('focus', function() {
-                this.parentElement.style.transform = 'translateY(-2px)';
-            });
-
-            input.addEventListener('blur', function() {
-                this.parentElement.style.transform = 'translateY(0)';
-            });
-        });
-
-        // Real-time password matching
-        document.getElementById('confirmPassword').addEventListener('input', function() {
-            const password = document.getElementById('password').value;
-            const confirmPassword = this.value;
-            
-            if (confirmPassword && password !== confirmPassword) {
-                this.style.borderColor = '#ef4444';
-                this.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.3)';
-            } else if (confirmPassword && password === confirmPassword) {
-                this.style.borderColor = '#4ade80';
-                this.style.boxShadow = '0 0 20px rgba(74, 222, 128, 0.3)';
-            }
-        });
-
-        // Enhanced photo upload interactions
-        document.querySelector('.photo-upload').addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.style.borderColor = '#4ade80';
-            this.style.background = 'rgba(74, 222, 128, 0.15)';
-        });
-
-        document.querySelector('.photo-upload').addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.style.borderColor = 'rgba(74, 222, 128, 0.5)';
-            this.style.background = 'rgba(0, 0, 0, 0.3)';
-        });
-
-        document.querySelector('.photo-upload').addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.style.borderColor = 'rgba(74, 222, 128, 0.5)';
-            this.style.background = 'rgba(0, 0, 0, 0.3)';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                document.getElementById('profilePhoto').files = files;
-                const event = new Event('change');
-                document.getElementById('profilePhoto').dispatchEvent(event);
-            }
-        });
     </script>
 </body>
 </html>

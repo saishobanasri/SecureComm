@@ -21,7 +21,7 @@ const messageSchema = new mongoose.Schema({
   },
   messageText: {
     type: String,
-    required: true,
+    required: false, // --- MODIFIED --- (No longer required, can be null if it's an image)
     trim: true
   },
   read: {
@@ -42,7 +42,6 @@ const messageSchema = new mongoose.Schema({
     default: false,
     index: true
   },
-  // ========== ADD THESE TWO FIELDS ==========
   anonymousSenderSession: {
     type: String,
     required: false,
@@ -52,6 +51,15 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: false,
     index: true
+  },
+  // ========== ADD THESE TWO FIELDS FOR IMAGES ==========
+  imageText: {
+    type: String, // Will store the encrypted Base64 string for the receiver
+    required: false
+  },
+  senderImageCopy: {
+    type: String, // Will store the encrypted Base64 string for the sender
+    required: false
   }
   // ==========================================
 }, {
@@ -60,5 +68,14 @@ const messageSchema = new mongoose.Schema({
 
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
 messageSchema.index({ senderId: 1, receiverId: 1, isAnonymous: 1 });
+
+// --- NEW: Ensure at least text or image is present ---
+messageSchema.pre('validate', function(next) {
+  if (!this.messageText && !this.imageText) {
+    next(new Error('Message must contain either text or an image.'));
+  } else {
+    next();
+  }
+});
 
 module.exports = mongoose.model('Message', messageSchema);

@@ -23,67 +23,13 @@ const Approver = require('./models/Approver.js');
 const Question = require('./models/Question');
 const Answer = require('./models/Answer');
 const AnswerRating = require('./models/AnswerRating');
-const http = require('http');
-const WebSocket = require('ws');
+
 // Import Routes
 const registerRoute = require("./routes/register");
 
 const bcrypt = require('bcryptjs');
 
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-// WebSocket connection manager
-const activeConnections = new Map();
-
-wss.on('connection', (ws) => {
-  console.log('🔌 New WebSocket connection');
-  let connectedUserId = null;
-
-  ws.on('message', (message) => {
-    try {
-      const data = JSON.parse(message);
-      
-      if (data.type === 'auth') {
-        connectedUserId = data.militaryId;
-        activeConnections.set(connectedUserId, ws);
-        console.log(`✅ ${connectedUserId} connected`);
-        ws.send(JSON.stringify({ type: 'auth_success' }));
-      }
-      
-      if (data.type === 'typing') {
-        const recipientWs = activeConnections.get(data.recipientId);
-        if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-          recipientWs.send(JSON.stringify({
-            type: 'typing',
-            senderId: connectedUserId,
-            isTyping: data.isTyping
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('WebSocket error:', error);
-    }
-  });
-
-  ws.on('close', () => {
-    if (connectedUserId) {
-      activeConnections.delete(connectedUserId);
-      console.log(`🔌 ${connectedUserId} disconnected`);
-    }
-  });
-});
-
-// Helper function
-function notifyUser(recipientId, messageData) {
-  const ws = activeConnections.get(recipientId);
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'new_message', message: messageData }));
-    return true;
-  }
-  return false;
-}
 const PORT = process.env.PORT || 3000;
 
 // Create uploads directory if it doesn't exist
@@ -107,10 +53,11 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+// MODIFIED: Increased limit for Base64 image uploads
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(bodyParser.json({ limit: '25mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '25mb' }));
 
 // Serve static files
 app.use(express.static('public'));
@@ -1062,7 +1009,7 @@ app.post('/api/chat/send', async (req, res) => {
   try {
     const { senderId, receiverId, messageText, senderCopy, isAnonymous } = req.body;
 
-    // ========== Handle Anonymous Messages ==========
+    // ========== NEW: Handle Anonymous Messages ==========
     if (isAnonymous) {
       // Get current active session IDs for both users
       const senderSession = await getActiveSessionId(senderId);
@@ -1096,20 +1043,17 @@ app.post('/api/chat/send', async (req, res) => {
         messageText: messageText,
         senderCopy: senderCopy,
         isAnonymous: true,
-        anonymousSenderSession: sessionA,
-        anonymousReceiverSession: sessionB,
-        deletedBy: []
+        anonymousSenderSession: sessionA,      // ← NEW FIELD
+        anonymousReceiverSession: sessionB,    // ← NEW FIELD
+        deletedBy: [] // Fresh message, not deleted by anyone
       });
 
       console.log(`✅ Anonymous message saved with ID: ${message._id}`);
-      
-      // 🆕 Notify receiver via WebSocket
-      notifyUser(receiverId, message);
-      
       return res.json({ success: true, message });
     }
+    // ========== END NEW CODE ==========
 
-    // ========== Non-anonymous message ==========
+    // Non-anonymous message (your existing code)
     const message = await Message.create({
       senderId,
       receiverId,
@@ -1117,9 +1061,6 @@ app.post('/api/chat/send', async (req, res) => {
       senderCopy,
       isAnonymous: false
     });
-
-    // 🆕 Notify receiver via WebSocket
-    notifyUser(receiverId, message);
 
     res.json({ success: true, message });
 
@@ -1198,6 +1139,16 @@ app.get('/api/chat/conversations/:userId', async (req, res) => {
         }
         // ========== END NEW CODE ==========
 
+        // --- NEW: Calculate unread count for this conversation ---
+        const unreadCount = await Message.countDocuments({
+          senderId: otherPartyId,  // From the other person
+          receiverId: userId,    // To me
+          isAnonymous: isAnonymous,
+          read: false,
+          deletedBy: { $ne: userId } // And not hidden by me
+        });
+        // --- END NEW ---
+
         conversationsMap.set(convoKey, {
           otherPartyId: otherPartyId,
           isAnonymous: isAnonymous,
@@ -1205,7 +1156,7 @@ app.get('/api/chat/conversations/:userId', async (req, res) => {
           avatar: displayAvatar,
           lastMessage: 'Encrypted message',
           timestamp: msg.createdAt,
-          unread: 0
+          unread: unreadCount // --- MODIFIED: Use the calculated count ---
         });
       }
     }
@@ -1265,6 +1216,26 @@ app.get('/api/chat/history/:myId/:otherId', async (req, res) => {
     const { myId, otherId } = req.params;
     const { anonymous } = req.query;
     const isAnonymous = anonymous === 'true';
+
+    // --- NEW: Mark messages as read when history is fetched ---
+    try {
+      await Message.updateMany(
+        {
+          senderId: otherId,    // Messages sent by the other person
+          receiverId: myId,   // to me
+          isAnonymous: isAnonymous,
+          read: false         // that are unread
+        },
+        {
+          $set: { read: true } // Set them to read
+        }
+      );
+      console.log(`Marked messages as read for ${myId} from ${otherId} (anon: ${isAnonymous})`);
+    } catch (updateError) {
+      console.error('Error marking messages as read:', updateError);
+      // Don't stop the request, just log the error
+    }
+    // --- END NEW ---
 
     const messages = await Message.find({
       $or: [
@@ -1359,6 +1330,26 @@ app.post('/api/chat/hide', async (req, res) => {
   }
 });
 
+// --- NEW ROUTE: Get total unread message count ---
+app.get('/api/chat/unread-count/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const totalUnread = await Message.countDocuments({
+      receiverId: userId,
+      read: false,
+      deletedBy: { $ne: userId } // Don't count hidden messages
+    });
+
+    res.json({ success: true, totalUnread: totalUnread });
+
+  } catch (error) {
+    console.error('Error fetching total unread count:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+// --- END NEW ROUTE ---
+
 /**
  * DELETE /api/chat/message
  * Deletes a single message by its _id.
@@ -1445,6 +1436,16 @@ app.use((error, req, res, next) => {
       message: 'File too large. Maximum size is 5MB.'
     });
   }
+  
+  // Handle PayloadTooLargeError from body-parser
+  if (error.type === 'entity.too.large') {
+      console.error('❌ PayloadTooLargeError:', error.message);
+      return res.status(413).json({
+          success: false,
+          error: "Payload too large",
+          message: `Request entity is too large. Limit is ${error.limit}.`
+      });
+  }
 
   if (error instanceof multer.MulterError) {
     return res.status(400).json({
@@ -1484,12 +1485,15 @@ async function startServer() {
     console.log('📡 Military SecureComm Database Online');
     console.log("📊 Database: securecomm_db");
 
-    server.listen(PORT, () => {
-  console.log('\n🚀 ===== MILITARY SECURECOMM SERVER =====');
-  console.log(`🌐 URL: http://localhost:${PORT}`);
-  console.log(`🔌 WebSocket: ACTIVE`);
-  console.log('=====================================\n');
-});
+    app.listen(PORT, () => {
+      console.log('\n🚀 ===== MILITARY SECURECOMM SERVER =====');
+      console.log(`📍 URL: http://localhost:${PORT}`);
+      console.log(`🔐 System Status: SECURE & OPERATIONAL`);
+      console.log('=====================================\n');
+
+      console.log('💡 Using browser-based face recognition with TensorFlow.js');
+      console.log(`📝 Registration endpoint: http://localhost:${PORT}/api/register`);
+    });
 
   } catch (error) {
     console.error('❌ Failed to start server:', error);

@@ -869,42 +869,20 @@
          * @returns {Uint8Array} The array of byte values.
          */
         function stringToBytes(str) {
-            const bytes = [];
-            for (let i = 0; i < str.length; i++) {
-                const code = str.charCodeAt(i);
-                if (code < 0x80) {
-                    bytes.push(code);
-                } else if (code < 0x800) {
-                    bytes.push(0xc0 | (code >> 6), 0x80 | (code & 0x3f));
-                } else if (code < 0xd800 || code >= 0xe000) {
-                    bytes.push(0xe0 | (code >> 12), 0x80 | ((code >> 6) & 0x3f), 0x80 | (code & 0x3f));
-                }
-            }
-            return new Uint8Array(bytes);
+            // This function must match the server's TextEncoder/Buffer logic
+            return new TextEncoder().encode(str);
         }
-        
+
         /**
          * Converts an array of byte values (UTF-8) back to a string.
          * @param {Uint8Array} bytes The array of byte values.
          * @returns {string} The decoded string.
          */
         function bytesToString(bytes) {
-            let str = '';
-            for (let i = 0; i < bytes.length; i++) {
-                const byte = bytes[i];
-                if (byte < 0x80) {
-                    str += String.fromCharCode(byte);
-                } else if ((byte & 0xe0) === 0xc0) {
-                    const charCode = ((byte & 0x1f) << 6) | (bytes[++i] & 0x3f);
-                    str += String.fromCharCode(charCode);
-                } else {
-                    const charCode = ((byte & 0x0f) << 12) | ((bytes[++i] & 0x3f) << 6) | (bytes[++i] & 0x3f);
-                    str += String.fromCharCode(charCode);
-                }
-            }
-            return str;
+            // This function must match the server's TextDecoder/Buffer logic
+            return new TextDecoder().decode(bytes);
         }
-        
+
         /**
          * "Encrypts" a message using a simple repeating-key XOR cipher.
          * WARNING: This is NOT cryptographically secure.
@@ -930,8 +908,15 @@
          * @param {string} password The password to use as a key.
          * @returns {string} The decrypted plaintext message.
          */
+        // THIS IS THE CORRECT CODE:
         function decryptMessage(encryptedData, password) {
-            const decryptedBytes = encryptMessage(bytesToString(encryptedData), password);
+            const passwordBytes = stringToBytes(password);
+            const decryptedBytes = new Uint8Array(encryptedData.length);
+
+            for (let i = 0; i < encryptedData.length; i++) {
+                decryptedBytes[i] = encryptedData[i] ^ passwordBytes[i % passwordBytes.length];
+            }
+
             return bytesToString(decryptedBytes);
         }
 
@@ -988,6 +973,8 @@
                     reject(new Error('Error loading image'));
                 };
                 if (typeof imageFile === 'string') {
+                    // Add crossOrigin = 'anonymous' for loading from server
+                    img.crossOrigin = 'anonymous';
                     img.src = imageFile; // URL string
                 } else {
                     img.src = URL.createObjectURL(imageFile); // File object
@@ -1054,7 +1041,7 @@
 
                 for (const profile of profiles) {
                     try {
-                        console.log(`📸 Processing ${profile.name}...`);
+                        console.log(`📸 Processing ${profile.militaryId}...`);
                         
                         const img = new Image();
                         img.crossOrigin = 'anonymous';
@@ -1081,7 +1068,7 @@
                         }
 
                     } catch (error) {
-                        console.log(`⚠️  Error processing ${profile.name}:`, error.message);
+                        console.log(`⚠️  Error processing ${profile.militaryId}:`, error.message);
                     }
                 }
 
