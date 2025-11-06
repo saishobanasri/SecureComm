@@ -53,6 +53,37 @@ app.use(cors({
   credentials: true
 }));
 
+// Add express-session
+const session = require('express-session');
+
+// Session middleware configuration
+app.use(session({
+  secret: 'your-super-secret-key-change-this-in-production', // Change this!
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // Set to true if using HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Authentication middleware with cache prevention
+function requireAuth(req, res, next) {
+    // Set headers to prevent caching
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
+    if (req.session && req.session.userId) {
+        console.log('✅ User authenticated:', req.session.userId);
+        next(); // User is authenticated, proceed
+    } else {
+        console.log('❌ No valid session, redirecting to login');
+        res.redirect('/login.html'); // Redirect to login
+    }
+}
+
 // MODIFIED: Increased limit for Base64 image uploads
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
@@ -290,15 +321,19 @@ app.post('/api/authenticate', async (req, res) => {
       const session = await Session.createSession(profile.militaryId, clientIP);
       console.log(`📊 Session created: ${session.session_id}`);
 
-      res.json({
-        success: true,
-        message: 'Authentication successful',
-        profile: profile,
-        session: {
-          session_id: session.session_id,
-          login_time: session.login_time
-        }
-      });
+      // Store session data
+req.session.userId = profile.militaryId;
+req.session.sessionId = session.session_id;
+
+res.json({
+  success: true,
+  message: 'Authentication successful',
+  profile: profile,
+  session: {
+    session_id: session.session_id,
+    login_time: session.login_time
+  }
+});
 
     } catch (sessionError) {
       console.error('❌ Session creation error:', sessionError);
@@ -410,7 +445,7 @@ app.post('/api/approvals/action', async (req, res) => {
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
-    // Prepare approval data for email BEFORE any other operations
+    // ========== CAPTURE EMAIL DATA FIRST (BEFORE ANY OPERATIONS) ==========
     let approvalData = null;
     if (action === 'approve') {
       console.log('📧 Preparing email data...');
@@ -429,6 +464,7 @@ app.post('/api/approvals/action', async (req, res) => {
       }
     }
 
+    // ========== PROCESS APPROVAL ==========
     if (action === 'approve') {
       console.log(`✅ Approving profile for ${approval.subordinate_id}`);
 
@@ -465,6 +501,7 @@ app.post('/api/approvals/action', async (req, res) => {
       fs.writeFileSync(stegoImagePath, stegoImageBuffer);
       console.log(`💾 Stego image saved to: ${stegoImagePath}`);
 
+      // ========== CREATE PROFILE ==========
       const newProfile = new Profile({
         militaryId: approval.subordinate_id,
         hashedPassword: approval.hash_password,
@@ -479,35 +516,62 @@ app.post('/api/approvals/action', async (req, res) => {
       });
       await newProfile.save();
       console.log(`👤 Profile created successfully for ${newProfile.militaryId}`);
-      
+
+      // Clear temporary password
       approval.plain_password_temp = undefined;
     }
     
+    // ========== UPDATE APPROVAL STATUS (DO NOT DELETE YET!) ==========
     approval.status = newStatus;
     approval.approved_by = approverId;
     approval.approved_date = new Date();
     await approval.save();
+    console.log(`📝 Approval status updated to: ${newStatus}`);
 
+    // ========== UPDATE APPROVER STATUS ==========
     await Approver.findOneAndUpdate({
-      approval_id: approvalId,
-      approver_id: approverId
+        approval_id: approvalId,
+        approver_id: approverId
     }, {
-      approval_status: newStatus,
-      approval_date: new Date()
+        approval_status: newStatus,
+        approval_date: new Date()
     });
+    console.log(`✅ Approver record updated`);
 
+    // ========== SEND RESPONSE (WITH EMAIL DATA) ==========
     console.log('📤 Sending response with approvalData:', approvalData);
 
     res.json({ 
-      success: true, 
-      message: `Registration successfully ${newStatus}.`,
-      approvalData: approvalData
+        success: true, 
+        message: `Registration successfully ${newStatus}.`,
+        approvalData: approvalData  // ← This contains email info for frontend
     });
+
+    // NOTE: Frontend will now handle deletion after email is sent
 
   } catch (error) {
     console.error(`❌ Error processing approval action:`, error);
     res.status(500).json({ error: 'Failed to process approval action', details: error.message });
   }
+});
+
+// Keep the delete route separate - called by frontend AFTER email
+app.post('/api/approvals/delete', async (req, res) => {
+    try {
+        const { approvalId } = req.body;
+        
+        console.log(`🗑️ Deleting approval record: ${approvalId}`);
+        await Approval.findByIdAndDelete(approvalId);
+        console.log(`✅ Approval record deleted`);
+        
+        await Approver.deleteMany({ approval_id: approvalId });
+        console.log(`✅ Approver records deleted`);
+        
+        res.json({ success: true, message: 'Records deleted' });
+    } catch (error) {
+        console.error('❌ Error deleting approval:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // DECRYPTION ROUTE
@@ -942,6 +1006,9 @@ app.get('/login', (req, res) => {
 // Route for logout
 app.post('/api/logout', async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     const { session_id, military_id } = req.body;
 
     if (!session_id || !military_id) {
@@ -955,8 +1022,20 @@ app.post('/api/logout', async (req, res) => {
 
     const session = await Session.endSession(session_id, military_id);
 
+    // IMPORTANT: Destroy server-side session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('❌ Session destruction error:', err);
+      }
+    });
+
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+res.set('Pragma', 'no-cache');
+res.set('Expires', '-1');
+
     if (session) {
       console.log(`✅ Session ended successfully: ${session_id}`);
+      res.clearCookie('connect.sid'); // Clear session cookie
       res.json({
         success: true,
         message: 'Logout successful',
@@ -966,6 +1045,7 @@ app.post('/api/logout', async (req, res) => {
         }
       });
     } else {
+      res.clearCookie('connect.sid');
       res.status(404).json({
         success: false,
         error: 'Session not found'
@@ -974,6 +1054,7 @@ app.post('/api/logout', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Logout error:', error);
+    res.clearCookie('connect.sid');
     res.status(500).json({
       success: false,
       error: 'Logout failed: ' + error.message
@@ -998,9 +1079,9 @@ app.get('/api/sessions/:militaryId', async (req, res) => {
   }
 });
 
-// Serve main.html
-app.get('/main.html', (req, res) => {
-  console.log('main.html requested directly');
+// Serve main.html - PROTECTED ROUTE
+app.get('/main.html', requireAuth, (req, res) => {
+  console.log('main.html requested - user authenticated');
   const mainPath = path.join(__dirname, 'public', 'main.html');
 
   if (fs.existsSync(mainPath)) {
@@ -1012,10 +1093,20 @@ app.get('/main.html', (req, res) => {
   }
 });
 
-app.get('/main', (req, res) => {
-  console.log('main route requested');
+app.get('/main', requireAuth, (req, res) => {
+  console.log('main route requested - user authenticated');
   const mainPath = path.join(__dirname, 'public', 'main.html');
   res.sendFile(mainPath);
+});
+
+// Protect chat page
+app.get('/chat.html', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+
+// Protect stego page
+app.get('/Stego.html', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'Stego.html'));
 });
 
 
@@ -1445,6 +1536,64 @@ app.get('/api/profiles/list/:myId', async (req, res) => {
   } catch (error) {
     console.error('Error fetching profile list:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/check-auth', (req, res) => {
+    console.log('🔍 Checking auth, session:', req.session);
+    if (req.session && req.session.userId) {
+        res.json({ authenticated: true, userId: req.session.userId });
+    } else {
+        res.json({ authenticated: false });
+    }
+});
+
+// Route for password reset
+app.post('/api/reset-password', async (req, res) => {
+  try {
+    const { militaryId, newPassword } = req.body;
+
+    console.log('🔄 Password reset request for:', militaryId);
+
+    if (!militaryId || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Military ID and new password are required'
+      });
+    }
+
+    // Find the profile
+    const profile = await Profile.findOne({ militaryId: militaryId });
+    
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Military ID not found'
+      });
+    }
+
+    // Hash the new password using the same method as registration
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update the password and salt
+    profile.hashedPassword = hashedPassword;
+    profile.salt = salt;
+    await profile.save();
+
+    console.log(`✅ Password reset successful for: ${militaryId}`);
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Password reset error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Password reset failed: ' + error.message
+    });
   }
 });
 

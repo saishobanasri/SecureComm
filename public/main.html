@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureComm - Command Dashboard</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo.png">
     <!-- EmailJS browser SDK -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -1174,6 +1177,22 @@
     </div>
 
     <script>
+// IMMEDIATE authentication check - MUST BE FIRST
+(function() {
+    // Check if session exists
+    if (!sessionStorage.getItem('activeSession') && !window.activeSession) {
+        window.location.replace('/index.html');
+        return;
+    }
+    
+    // Prevent back button navigation
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener('popstate', function() {
+        window.history.pushState(null, "", window.location.href);
+        // Always redirect to index on back button
+        window.location.replace('/index.html');
+    });
+})();
         const API_BASE_URL = window.location.origin;
 let currentQuestionData = null;
 let allQuestions = [];
@@ -1641,13 +1660,15 @@ if (searchInput) {
         document.getElementById('reviewModal').style.display = 'none';
     }
 
-    async function handleApproval(approvalId, isApproved) {
+async function handleApproval(approvalId, isApproved) {
     const session = getStoredSession();
     if (!session || !session.military_id) {
         alert('Error: Could not identify current user.');
         return;
     }
+    
     try {
+        // Step 1: Process the approval/rejection
         const response = await fetch('/api/approvals/action', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1657,18 +1678,44 @@ if (searchInput) {
                 action: isApproved ? 'approve' : 'reject',
             }),
         });
+        
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Server error');
         
-        // NEW: Send email if approved
-        if (isApproved) {
+        // Step 2: Send email if approved (BEFORE deletion)
+        if (isApproved && result.approvalData) {
+            console.log('📧 Sending approval email...');
             await sendApprovalEmail(approvalId, result.approvalData);
+            console.log('✅ Email sent, now deleting approval record...');
         }
         
-        alert(`Success: ${result.message}`);
+        // Step 3: Delete the approval record AFTER email is sent
+        try {
+            const deleteResponse = await fetch('/api/approvals/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ approvalId: approvalId })
+            });
+            
+            if (deleteResponse.ok) {
+                console.log('✅ Approval record deleted');
+            } else {
+                console.warn('⚠️ Could not delete approval record');
+            }
+        } catch (deleteError) {
+            console.error('⚠️ Error deleting approval:', deleteError);
+            // Don't throw - we still want to show success message
+        }
+        
+        // Step 4: Show success message
+        alert(`✅ Success: ${result.message}`);
+        
+        // Step 5: Refresh the approvals list
         showApprovals();
+        
     } catch (error) {
-        alert(`Error: Could not process the request. ${error.message}`);
+        console.error('❌ Error processing approval:', error);
+        alert(`❌ Error: Could not process the request. ${error.message}`);
     }
 }
 
@@ -1677,20 +1724,20 @@ async function sendApprovalEmail(approvalId, approvalData) {
         console.log('📧 Starting email send process...');
         console.log('📧 Approval data received:', approvalData);
         
+        // Validate email data
         if (!approvalData || !approvalData.email) {
-            console.log('❌ No email data found, skipping email');
+            console.warn('⚠️ No email data found, skipping email');
             return;
         }
 
         // Validate EmailJS is initialized
         if (typeof emailjs === 'undefined') {
             console.error('❌ EmailJS not loaded');
-            alert('Warning: Email service not available. User may need to be contacted manually.');
-            return;
+            throw new Error('EmailJS service not available');
         }
 
         const templateParams = {
-            email: approvalData.email,           // Changed from to_email to email
+            email: approvalData.email,
             name: approvalData.name,
             subordinate_id: approvalData.subordinate_id,
             unit_id: approvalData.unit_id,
@@ -1711,8 +1758,10 @@ async function sendApprovalEmail(approvalId, approvalData) {
 
         if (emailResponse.status === 200) {
             console.log('✅ Email sent successfully to:', approvalData.email);
-            alert('✅ Approval successful! Notification email sent to user.');
+        } else {
+            throw new Error(`Email service returned status ${emailResponse.status}`);
         }
+        
     } catch (emailError) {
         console.error('❌ Email sending failed:', emailError);
         console.error('Error details:', {
@@ -1720,7 +1769,8 @@ async function sendApprovalEmail(approvalId, approvalData) {
             text: emailError.text,
             status: emailError.status
         });
-        alert('Warning: Approval successful but email notification failed. User may need to be contacted manually.');
+        // Re-throw to let handleApproval know email failed
+        throw new Error('Failed to send approval email: ' + emailError.message);
     }
 }
     function toggleUserDropdown() {
@@ -1744,37 +1794,39 @@ async function sendApprovalEmail(approvalId, approvalData) {
             const sessionData = window.activeSession || getStoredSession();
             
             if (sessionData && sessionData.session_id && sessionData.military_id) {
-                console.log('🚪 Logging out:', sessionData.session_id);
-                
-                const response = await fetch(`${API_BASE_URL}/api/logout`, {
+                await fetch(`${API_BASE_URL}/api/logout`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         session_id: sessionData.session_id,
                         military_id: sessionData.military_id
                     })
                 });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    console.log('✅ Logout successful');
-                } else {
-                    console.warn('⚠️ Logout API failed:', data.error);
-                }
             }
             
-            sessionStorage.removeItem('activeSession');
+            // Clear all client storage
+            sessionStorage.clear();
+            localStorage.clear();
             window.activeSession = null;
             
-            window.location.href = 'index.html';
+            // Clear browser cache
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+            
+            // Prevent back navigation
+            window.history.pushState(null, '', window.location.href);
+            
+            // Redirect using replace to prevent back button
+            window.location.replace('/index.html');
             
         } catch (error) {
             console.error('❌ Logout error:', error);
-            sessionStorage.removeItem('activeSession');
-            window.location.href = 'index.html';
+            sessionStorage.clear();
+            localStorage.clear();
+            window.location.replace('/index.html');
         }
     }
 }

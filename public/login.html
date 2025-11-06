@@ -768,25 +768,25 @@
                         <input type="password" class="form-input" id="password" placeholder="Enter your secure password">
                     </div>
                     <button class="login-btn" onclick="authenticateUser()">Authenticate & Decrypt</button>
-                    <div class="forgot-password-link">
+                    <!--<div class="forgot-password-link">
                         <a href="javascript:void(0);" onclick="showNotImplemented()">Forgot Password?</a>
-                    </div>
+                    </div> -->
                 </div>
             </div>
 
             <div id="manualSection" style="display: none;">
                 <div class="form-group">
                     <label for="militaryId" class="form-label">Military ID</label>
-                    <input type="text" class="form-input" id="militaryId" placeholder="Enter your Military ID">
+                    <input type="text" class="form-input" id="militaryId" placeholder="Enter your Military ID" value="IC-">
                 </div>
                 <div class="form-group">
                     <label for="manualPassword" class="form-label">Military Password / Decryption Key</label>
                     <input type="password" class="form-input" id="manualPassword" placeholder="Enter your secure password">
                 </div>
                 <button class="login-btn" onclick="authenticateWithIdAndPassword()">Authenticate & Decrypt</button>
-                <div class="forgot-password-link">
+                <!--<div class="forgot-password-link">
                     <a href="javascript:void(0);" onclick="showNotImplemented()">Forgot Password?</a>
-                </div>
+                </div>-->
             </div>
 
             <div class="loading" id="loading">Processing authentication...</div>
@@ -848,6 +848,32 @@
             </div>
         </div>
     </div>
+
+    <!-- Forgot Password Modal -->
+<div id="forgotPasswordModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Reset Password</h2>
+            <p class="modal-subtitle">Enter your credentials to reset password</p>
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label for="resetMilitaryId" class="form-label">Military ID</label>
+            <input type="text" class="form-input" id="resetMilitaryId" placeholder="Enter your Military ID">
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label for="resetNewPassword" class="form-label">New Password</label>
+            <input type="password" class="form-input" id="resetNewPassword" placeholder="Enter new password">
+        </div>
+        <div class="form-group" style="margin-bottom: 30px;">
+            <label for="resetConfirmPassword" class="form-label">Confirm New Password</label>
+            <input type="password" class="form-input" id="resetConfirmPassword" placeholder="Confirm new password">
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn confirm-btn" onclick="resetPassword()">Reset Password</button>
+            <button class="modal-btn cancel-btn" onclick="closeModal('forgotPasswordModal')">Cancel</button>
+        </div>
+    </div>
+</div>
 
     <script>
         let stream = null;
@@ -1389,37 +1415,84 @@
         }
 
         function enterSystem() {
-            try {
-                if (window.currentSession && window.currentProfile) {
-                    localStorage.setItem('militaryId', window.currentProfile.militaryId);
-                    const sessionData = {
-                        session_id: window.currentSession.session_id,
-                        military_id: window.currentProfile.militaryId,
-                        login_time: window.currentSession.login_time || new Date().toISOString(),
-                        profile: window.currentProfile,
-                        password: window.currentPassword // Use stored password
-                    };
-                    
-                    sessionStorage.setItem('activeSession', JSON.stringify(sessionData));
-                }
-                
-                window.location.href = 'main.html';
-                
-            } catch (error) {
-                console.error('Error in enterSystem:', error);
-            }
+    try {
+        if (window.currentSession && window.currentProfile) {
+            localStorage.setItem('militaryId', window.currentProfile.militaryId);
+            const sessionData = {
+                session_id: window.currentSession.session_id,
+                military_id: window.currentProfile.militaryId,
+                login_time: window.currentSession.login_time || new Date().toISOString(),
+                profile: window.currentProfile,
+                password: window.currentPassword
+            };
+            
+            sessionStorage.setItem('activeSession', JSON.stringify(sessionData));
         }
-
+        
+        // Clear forward history by replacing instead of pushing
+        window.location.replace('main.html');
+        
+    } catch (error) {
+        console.error('Error in enterSystem:', error);
+    }
+}
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
 
-        // ==================== UTILITY FUNCTIONS ====================
-
-        // NEW: Function for "Forgot Password" link
         function showNotImplemented() {
-            alert('Forgot Password functionality needs to be implemented.');
+    document.getElementById('forgotPasswordModal').style.display = 'block';
+}
+
+async function resetPassword() {
+    const militaryId = document.getElementById('resetMilitaryId').value.trim();
+    const newPassword = document.getElementById('resetNewPassword').value;
+    const confirmPassword = document.getElementById('resetConfirmPassword').value;
+
+    if (!militaryId || !newPassword || !confirmPassword) {
+        alert('🚨 ERROR\nAll fields are required.');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        alert('🚨 ERROR\nPasswords do not match.');
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        alert('🚨 ERROR\nPassword must be at least 6 characters long.');
+        return;
+    }
+
+    try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('loading').textContent = 'Resetting password...';
+
+        const response = await fetch('/api/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ militaryId, newPassword })
+        });
+
+        const result = await response.json();
+        document.getElementById('loading').style.display = 'none';
+
+        if (result.success) {
+            closeModal('forgotPasswordModal');
+            alert('✅ SUCCESS\nPassword reset successfully! You can now login with your new password.');
+            document.getElementById('resetMilitaryId').value = '';
+            document.getElementById('resetNewPassword').value = '';
+            document.getElementById('resetConfirmPassword').value = '';
+        } else {
+            alert('🚨 ERROR\n' + (result.error || 'Password reset failed.'));
         }
+
+    } catch (error) {
+        document.getElementById('loading').style.display = 'none';
+        console.error('Password reset error:', error);
+        alert('🚨 NETWORK ERROR\nUnable to reset password. Please try again.');
+    }
+}
 
         window.onclick = function(event) {
             const modals = document.querySelectorAll('.modal');
@@ -1447,6 +1520,22 @@
                 stream.getTracks().forEach(track => track.stop());
             }
         });
+
+        document.getElementById('militaryId').addEventListener('focus', function() {
+    if (this.value === '' || this.value === 'IC-') {
+        this.value = 'IC-';
+        // Move cursor to the end
+        setTimeout(() => {
+            this.setSelectionRange(this.value.length, this.value.length);
+        }, 0);
+    }
+});
+
+document.getElementById('militaryId').addEventListener('input', function() {
+    if (!this.value.startsWith('IC-')) {
+        this.value = 'IC-';
+    }
+});
 </script>
 </body>
 </html>
